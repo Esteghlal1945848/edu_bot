@@ -1,112 +1,116 @@
-import asyncio
-import os
+from aiogram import types
 
-from aiogram import Bot, Dispatcher
-from aiogram.contrib.fsm_storage.redis import RedisStorage2
+from database.core import get_db
+from database.models import Archive
 
-from database.core import init_db
-
-from handlers.start import (
-    cmd_start,
-    handle_buttons
-)
-
-from handlers.upload import (
-    handle_file,
-    handle_caption
-)
+from handlers.state import upload_state
 
 
 # =========================
-# STARTUP
+# FILE
 # =========================
-async def on_startup(dp):
+async def handle_file(message: types.Message):
 
-    await init_db()
+    user_id = message.from_user.id
 
-    print("Database initialized")
-    print("Bot started")
+    state = upload_state.get(user_id)
 
+    if not state:
+        return
 
-# =========================
-# MAIN
-# =========================
-async def main():
+    if state.get("mode") != "admin_upload":
+        return
 
-    bot = Bot(
-        token=os.getenv(
-            "BOT_TOKEN"
+    file_id = None
+    file_type = None
+
+    if message.document:
+
+        file_id = message.document.file_id
+        file_type = "pdf"
+
+    elif message.video:
+
+        file_id = message.video.file_id
+        file_type = "video"
+
+    if not file_id:
+
+        await message.answer(
+            "❌ فقط PDF یا MP4 بفرست"
         )
+
+        return
+
+    upload_state[user_id].update({
+
+        "file_id": file_id,
+
+        "type": file_type,
+
+        "step": "caption"
+
+    })
+
+    await message.answer(
+        "✍️ حالا توضیحات رو بنویس"
     )
 
-    storage = RedisStorage2(
 
-        host=os.getenv(
-            "REDIS_HOST",
-            "redis"
-        ),
+# =========================
+# CAPTION
+# =========================
+async def handle_caption(message: types.Message):
 
-        port=int(
-            os.getenv(
-                "REDIS_PORT",
-                6379
-            )
-        ),
+    user_id = message.from_user.id
 
-        password=os.getenv(
-            "REDIS_PASSWORD",
-            ""
-        )
-    )
+    state = upload_state.get(user_id)
 
-    dp = Dispatcher(
-        bot,
-        storage=storage
-    )
+    if not state:
+        return
 
-    # START
-    dp.register_message_handler(
-        cmd_start,
-        commands=["start"]
-    )
-
-    # FILE
-    dp.register_message_handler(
-        handle_file,
-        content_types=[
-            "document",
-            "video"
-        ]
-    )
-
-    # CAPTION
-    dp.register_message_handler(
-        handle_caption
-    )
-
-    # BUTTONS (آخر)
-    dp.register_message_handler(
-        handle_buttons
-    )
-
-    await on_startup(
-        dp
-    )
+    if state.get("step") != "caption":
+        return
 
     try:
 
-        await dp.start_polling()
+        async for db in get_db():
 
-    finally:
+            db.add(
 
-        await bot.session.close()
+                Archive(
 
+                    type=state["type"],
 
-# =========================
-# RUN
-# =========================
-if __name__ == "__main__":
+                    grade=state["grade"],
 
-    asyncio.run(
-        main()
-    )
+                    major=state["major"],
+
+                    subject=state["subject"],
+
+                    file_id=state["file_id"],
+
+                    caption=message.text,
+
+                    uploaded_by=user_id
+
+                )
+
+            )
+
+            await db.commit()
+
+        upload_state.pop(
+            user_id,
+            None
+        )
+
+        await message.answer(
+            "✅ فایل با موفقیت ذخیره شد"
+        )
+
+    except Exception as e:
+
+        await message.answer(
+            f"❌ خطا:\n{e}"
+        )
