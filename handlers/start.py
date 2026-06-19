@@ -1,4 +1,4 @@
-async def handle_buttons(message: types.Message):
+async def handle_buttons(message: type.Message):
 
     text = message.text
 
