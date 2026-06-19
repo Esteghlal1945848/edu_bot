@@ -1,6 +1,6 @@
 from aiogram import types
 
-ADMIN_ID = ADMIN_ID  # اگر از قبل داری
+ADMIN_ID = 7336595194  # اگر از قبل داری
 
 async def handle_buttons(message: types.Message):
 
@@ -43,7 +43,7 @@ async def handle_buttons(message: types.Message):
 
     elif text == "👑 پنل ادمین":
 
-        if str(message.from_user.id) != str(7336595194):
+        if str(message.from_user.id) != str(ADMIN_ID):
             return
 
         keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
