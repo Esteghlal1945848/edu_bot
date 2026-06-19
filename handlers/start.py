@@ -1,7 +1,3 @@
-from aiogram import types
-
-ADMIN_ID = 7336595194  # اگر از قبل داری
-
 async def handle_buttons(message: types.Message):
 
     text = message.text
@@ -11,24 +7,31 @@ async def handle_buttons(message: types.Message):
     # =================
 
     if text == "📚 جزوه":
+
         await message.answer(
             "کدوم پایه‌ای؟",
             reply_markup=grade_keyboard()
         )
+
 
     elif text == "🎥 ویدئو":
+
         await message.answer(
             "کدوم پایه‌ای؟",
             reply_markup=grade_keyboard()
         )
 
+
     elif text in ["دهم", "یازدهم", "دوازدهم"]:
+
         await message.answer(
             "رشته رو انتخاب کن 👇",
             reply_markup=major_keyboard(text)
         )
 
+
     elif text.startswith("رشته:"):
+
         data = text.replace("رشته:", "")
         grade, major = data.split("|")
 
@@ -37,13 +40,14 @@ async def handle_buttons(message: types.Message):
             reply_markup=subject_keyboard(grade, major)
         )
 
+
     # =================
     # پنل ادمین
     # =================
 
     elif text == "👑 پنل ادمین":
 
-        if str(message.from_user.id) != str(ADMIN_ID):
+        if str(message.from_user.id) != str(7336595194):
             return
 
         keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -56,6 +60,7 @@ async def handle_buttons(message: types.Message):
             "👑 پنل مدیریت",
             reply_markup=keyboard
         )
+
 
     # ---------- جزوه ----------
 
@@ -72,6 +77,7 @@ async def handle_buttons(message: types.Message):
             reply_markup=keyboard
         )
 
+
     elif text.startswith("آپلود جزوه |"):
 
         grade = text.split("|")[1].strip()
@@ -86,6 +92,7 @@ async def handle_buttons(message: types.Message):
             "رشته رو انتخاب کن",
             reply_markup=keyboard
         )
+
 
     # ---------- ویدئو ----------
 
@@ -102,6 +109,7 @@ async def handle_buttons(message: types.Message):
             reply_markup=keyboard
         )
 
+
     elif text.startswith("آپلود ویدئو |"):
 
         grade = text.split("|")[1].strip()
@@ -117,16 +125,23 @@ async def handle_buttons(message: types.Message):
             reply_markup=keyboard
         )
 
+
     # ---------- درس ----------
 
-    elif text.count("|") == 1:
+    elif "|" in text:
 
-        grade, major = text.split("|")
+        parts = text.split("|")
 
-        await message.answer(
-            "درس رو انتخاب کن 👇",
-            reply_markup=subject_keyboard(grade, major)
-        )
+        if len(parts) == 2:
+
+            grade = parts[0]
+            major = parts[1]
+
+            await message.answer(
+                "درس رو انتخاب کن 👇",
+                reply_markup=subject_keyboard(grade, major)
+            )
+
 
     elif text in [
         "فیزیک", "شیمی", "ریاضی", "هندسه",
