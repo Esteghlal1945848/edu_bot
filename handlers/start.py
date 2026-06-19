@@ -11,7 +11,7 @@ from bot.keyboards.archive import (
 )
 
 
-ADMIN_ID = 7336595194
+ADMIN_ID = 123456789
 
 upload_state = {}
 
@@ -74,10 +74,12 @@ async def cmd_start(message: types.Message):
 
 async def handle_buttons(message: types.Message):
 
-    text = message.text
+    text = message.text or ""
 
 
+    # ==================
     # کاربر
+    # ==================
 
     if text == "📚 جزوه":
 
@@ -121,7 +123,9 @@ async def handle_buttons(message: types.Message):
         )
 
 
-    # پنل ادمین
+    # ==================
+    # ادمین
+    # ==================
 
     elif text == "👑 پنل ادمین":
 
@@ -259,13 +263,14 @@ async def handle_buttons(message: types.Message):
         if str(message.from_user.id) != str(ADMIN_ID):
             return
 
+        if message.from_user.id not in upload_state:
+            upload_state[
+                message.from_user.id
+            ] = {}
+
         upload_state[
             message.from_user.id
         ]["subject"] = text
-
-        await message.answer(
-            "فایل را ارسال کن 📎\n\nجزوه → PDF\nویدئو → MP4"
-        )        upload_state[message.from_user.id]["subject"] = text
 
         await message.answer(
             "فایل را ارسال کن 📎\n\nجزوه → PDF\nویدئو → MP4"
