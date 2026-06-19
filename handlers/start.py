@@ -9,7 +9,7 @@ from bot.keyboards.archive import (
     subject_keyboard
 )
 
-ADMIN_ID = 123456789
+ADMIN_ID = 7336595194
 
 
 async def cmd_start(message: types.Message):
