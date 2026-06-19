@@ -2,21 +2,20 @@ from aiogram import types
 
 from database.core import get_db
 from database.models import Archive
-
 from handlers.state import upload_state
 
 
 # =========================
-# FILE
+# دریافت فایل
 # =========================
 async def handle_file(message: types.Message):
 
     user_id = message.from_user.id
 
-    state = upload_state.get(user_id)
-
-    if not state:
+    if user_id not in upload_state:
         return
+
+    state = upload_state[user_id]
 
     if state.get("mode") != "admin_upload":
         return
@@ -35,7 +34,7 @@ async def handle_file(message: types.Message):
     if not file_id:
 
         await message.answer(
-            "❌ فقط PDF یا MP4 بفرست"
+            "فقط PDF یا MP4 بفرست"
         )
 
         return
@@ -45,56 +44,44 @@ async def handle_file(message: types.Message):
     upload_state[user_id]["step"] = "caption"
 
     await message.answer(
-        "✍️ حالا توضیحات رو بنویس"
+        "✍️ توضیحات رو بنویس"
     )
 
 
 # =========================
-# CAPTION
+# دریافت توضیح
 # =========================
 async def handle_caption(message: types.Message):
-
-    await message.answer(
-        "DEBUG: handle_caption اجرا شد"
-    )
 
     user_id = message.from_user.id
 
     state = upload_state.get(user_id)
 
     if not state:
-
-        await message.answer(
-            "DEBUG: state پیدا نشد"
-        )
-
         return
 
     if state.get("step") != "caption":
-
-        await message.answer(
-            "DEBUG: step اشتباهه"
-        )
-
         return
 
     try:
 
         async for db in get_db():
 
-            archive = Archive(
+            db.add(
 
-                type=state["type"],
-                grade=state["grade"],
-                major=state["major"],
-                subject=state["subject"],
-                file_id=state["file_id"],
-                caption=message.text,
-                uploaded_by=user_id
+                Archive(
+
+                    type=state["type"],
+                    grade=state["grade"],
+                    major=state["major"],
+                    subject=state["subject"],
+                    file_id=state["file_id"],
+                    caption=message.text,
+                    uploaded_by=user_id
+
+                )
 
             )
-
-            db.add(archive)
 
             await db.commit()
 
@@ -104,11 +91,11 @@ async def handle_caption(message: types.Message):
         )
 
         await message.answer(
-            "✅ فایل با موفقیت ذخیره شد"
+            "✅ فایل ذخیره شد"
         )
 
     except Exception as e:
 
         await message.answer(
-            f"❌ خطا:\n{str(e)}"
+            f"❌ خطا:\n{e}"
         )
