@@ -44,7 +44,13 @@ async def cmd_start(message: types.Message):
         )
 
     await message.answer(
-        f"🎓 خوش اومدی {user.full_name}",
+        f"""
+🎓 خوش آمدی {user.full_name}
+
+📚 بزرگ‌ترین آرشیو جزوه و ویدئو
+
+از منو انتخاب کن 👇
+""",
         reply_markup=keyboard
     )
 
@@ -77,24 +83,20 @@ async def cmd_start(message: types.Message):
 async def handle_buttons(message: types.Message):
 
     text = message.text or ""
+    user_id = message.from_user.id
 
-    # ==================
+
     # USER
-    # ==================
 
-    if text == "📚 جزوه":
-
-        await message.answer(
-            "کدوم پایه؟",
-            reply_markup=grade_keyboard()
-        )
-
-    elif text == "🎥 ویدئو":
+    if text in ["📚 جزوه", "🎥 ویدئو"]:
 
         await message.answer(
             "کدوم پایه؟",
             reply_markup=grade_keyboard()
         )
+
+        return
+
 
     elif text in [
 
@@ -105,11 +107,12 @@ async def handle_buttons(message: types.Message):
     ]:
 
         await message.answer(
-            "رشته رو انتخاب کن",
-            reply_markup=major_keyboard(
-                text
-            )
+            "رشته رو انتخاب کن 👇",
+            reply_markup=major_keyboard(text)
         )
+
+        return
+
 
     elif text.startswith("رشته:"):
 
@@ -119,20 +122,21 @@ async def handle_buttons(message: types.Message):
         ).split("|")
 
         await message.answer(
-            "درس رو انتخاب کن",
+            "درس رو انتخاب کن 👇",
             reply_markup=subject_keyboard(
                 grade,
                 major
             )
         )
 
-    # ==================
+        return
+
+
     # ADMIN
-    # ==================
 
     elif text == "👑 پنل ادمین":
 
-        if str(message.from_user.id) != str(ADMIN_ID):
+        if str(user_id) != str(ADMIN_ID):
             return
 
         keyboard = types.ReplyKeyboardMarkup(
@@ -148,40 +152,57 @@ async def handle_buttons(message: types.Message):
         )
 
         await message.answer(
-            "پنل مدیریت",
+            "👑 پنل مدیریت",
             reply_markup=keyboard
         )
 
-    elif text == "📤 آپلود جزوه":
+        return
+
+
+    elif text in [
+
+        "📤 آپلود جزوه",
+        "🎥 آپلود ویدئو"
+
+    ]:
 
         keyboard = types.ReplyKeyboardMarkup(
             resize_keyboard=True
         )
 
-        keyboard.add(
-            "آپلود جزوه | دهم"
+        prefix = (
+            "آپلود جزوه"
+            if text == "📤 آپلود جزوه"
+            else "آپلود ویدئو"
         )
 
         keyboard.add(
-            "آپلود جزوه | یازدهم"
+            f"{prefix} | دهم"
         )
 
         keyboard.add(
-            "آپلود جزوه | دوازدهم"
+            f"{prefix} | یازدهم"
+        )
+
+        keyboard.add(
+            f"{prefix} | دوازدهم"
         )
 
         await message.answer(
-            "پایه رو انتخاب کن",
+            "پایه رو انتخاب کن 👇",
             reply_markup=keyboard
         )
 
-    elif text.startswith(
-        "آپلود جزوه |"
+        return
+
+
+    elif (
+        text.startswith("آپلود جزوه |")
+        or
+        text.startswith("آپلود ویدئو |")
     ):
 
-        grade = text.split(
-            "|"
-        )[1].strip()
+        grade = text.split("|")[1].strip()
 
         keyboard = types.ReplyKeyboardMarkup(
             resize_keyboard=True
@@ -200,17 +221,18 @@ async def handle_buttons(message: types.Message):
         )
 
         await message.answer(
-            "رشته رو انتخاب کن",
+            "رشته رو انتخاب کن 👇",
             reply_markup=keyboard
         )
+
+        return
+
 
     elif "|" in text:
 
         grade, major = text.split("|")
 
-        upload_state[
-            message.from_user.id
-        ] = {
+        upload_state[user_id] = {
 
             "mode": "admin_upload",
 
@@ -221,17 +243,20 @@ async def handle_buttons(message: types.Message):
         }
 
         await message.answer(
-            "درس رو انتخاب کن",
+            "درس رو انتخاب کن 👇",
             reply_markup=subject_keyboard(
                 grade,
                 major
             )
         )
 
+        return
+
+
     elif text in [
 
-        "شیمی",
         "فیزیک",
+        "شیمی",
         "ریاضی",
         "زیست",
         "فارسی",
@@ -240,15 +265,12 @@ async def handle_buttons(message: types.Message):
 
     ]:
 
-        if (
-            message.from_user.id
-            not in upload_state
-        ):
+        if user_id not in upload_state:
             return
 
-        upload_state[
-            message.from_user.id
-        ]["subject"] = text
+        upload_state[user_id][
+            "subject"
+        ] = text
 
         await message.answer(
             "📎 فایل رو بفرست"
