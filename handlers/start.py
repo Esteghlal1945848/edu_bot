@@ -9,8 +9,7 @@ from bot.keyboards.archive import (
     subject_keyboard
 )
 
-
-ADMIN_ID = 7336595194
+ADMIN_ID = 123456789
 
 
 async def cmd_start(message: types.Message):
@@ -39,13 +38,10 @@ async def cmd_start(message: types.Message):
 
     await message.answer(
         f"""
-🎓 <b>خوش آمدید به بزرگ‌ترین آرشیو آموزشی</b>
-
-👋 سلام {user.full_name}
+🎓 خوش آمدی {user.full_name}
 
 از منو انتخاب کن 👇
 """,
-        parse_mode="HTML",
         reply_markup=keyboard
     )
 
@@ -80,7 +76,7 @@ async def handle_buttons(message: types.Message):
     if text == "📚 جزوه":
 
         await message.answer(
-            "کدوم پایه‌ای؟ 👇",
+            "کدوم پایه‌ای؟",
             reply_markup=grade_keyboard()
         )
 
@@ -111,36 +107,39 @@ async def handle_buttons(message: types.Message):
         )
 
 
-    elif text == "🎥 ویدئو":
-
-        await message.answer(
-            "🎥 بخش ویدئو"
-        )
-
-
-    elif text == "👨‍🏫 دبیر":
-
-        await message.answer(
-            "👨‍🏫 بخش دبیر"
-        )
-
-
-    elif text == "🔍 جستجو":
-
-        await message.answer(
-            "عبارت جستجو را ارسال کن"
-        )
-
-
     elif text == "👑 پنل ادمین":
 
         if message.from_user.id != ADMIN_ID:
             return
 
-        await message.answer(
-            """
-👑 پنل مدیریت
+        keyboard = types.ReplyKeyboardMarkup(
+            resize_keyboard=True
+        )
 
-📤 آپلود جزوه
-"""
+        keyboard.add(
+            "📤 آپلود جزوه"
+        )
+
+        keyboard.add(
+            "🎥 آپلود ویدئو"
+        )
+
+        keyboard.add(
+            "🔙 برگشت"
+        )
+
+        await message.answer(
+            "پنل مدیریت",
+            reply_markup=keyboard
+        )
+
+
+    elif text == "📤 آپلود جزوه":
+
+        if message.from_user.id != ADMIN_ID:
+            return
+
+        await message.answer(
+            "جزوه برای کدوم پایه است؟",
+            reply_markup=grade_keyboard()
         )
