@@ -1,7 +1,8 @@
 from sqlalchemy import (
     Column,
     Integer,
-    String
+    String,
+    BigInteger
 )
 
 from database.core import Base
@@ -11,33 +12,71 @@ class User(Base):
 
     __tablename__ = "users"
 
-    id = Column(
-        Integer,
-        primary_key=True
-    )
-
-    telegram_id = Column(Integer)
-
-    username = Column(String)
-
-    full_name = Column(String)
-
-
-class File(Base):
-
-    __tablename__ = "files"
 
     id = Column(
         Integer,
         primary_key=True
     )
 
-    file_id = Column(String)
+    telegram_id = Column(
+        BigInteger,
+        unique=True
+    )
 
-    file_type = Column(String)
+    username = Column(
+        String,
+        nullable=True
+    )
 
-    grade = Column(String)
+    full_name = Column(
+        String
+    )
 
-    major = Column(String)
 
-    subject = Column(String)
+class Archive(Base):
+
+    __tablename__ = "archives"
+
+
+    id = Column(
+        Integer,
+        primary_key=True
+    )
+
+
+    type = Column(
+        String
+    )
+    # pdf
+    # video
+
+
+    grade = Column(
+        String
+    )
+
+
+    major = Column(
+        String
+    )
+
+
+    subject = Column(
+        String
+    )
+
+
+    file_id = Column(
+        String
+    )
+
+
+    caption = Column(
+        String,
+        nullable=True
+    )
+
+
+    uploaded_by = Column(
+        BigInteger
+    )
