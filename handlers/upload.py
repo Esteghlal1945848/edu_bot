@@ -83,7 +83,20 @@ async def handle_caption(message: types.Message):
                 uploaded_by=user_id
             )
         )
-        await db.commit()
+          try: 
+    await db.commit()
+
+    upload_state.pop(user_id, None)
+
+    await message.answer(
+        "✅ فایل با موفقیت ذخیره شد"
+    )
+
+except Exception as e:
+
+    await message.answer(
+        f"❌ خطا:\n{str(e)}"
+    )
 
     # پاک کردن state
     upload_state.pop(user_id, None)
