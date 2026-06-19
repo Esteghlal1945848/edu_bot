@@ -1,3 +1,77 @@
+from aiogram import types
+from database.core import get_db
+from database.models import User
+from sqlalchemy import select
+
+from bot.keyboards.archive import (
+    grade_keyboard,
+    major_keyboard,
+    subject_keyboard
+)
+
+# ✅ آیدی عددی خودت اینجاست
+ADMIN_ID = 123456789
+
+
+# =========================
+# /start
+# =========================
+async def cmd_start(message: types.Message):
+
+    user = message.from_user
+
+    keyboard = types.ReplyKeyboardMarkup(
+        resize_keyboard=True
+    )
+
+    keyboard.add(
+        "📚 جزوه",
+        "🎥 ویدئو"
+    )
+
+    keyboard.add(
+        "👨‍🏫 دبیر",
+        "🔍 جستجو"
+    )
+
+    if str(user.id) == str(ADMIN_ID):
+        keyboard.add("👑 پنل ادمین")
+
+    await message.answer(
+        f"""
+🎓 خوش آمدی {user.full_name}
+
+از منو انتخاب کن 👇
+""",
+        reply_markup=keyboard
+    )
+
+    async for db in get_db():
+
+        result = await db.execute(
+            select(User).where(
+                User.telegram_id == user.id
+            )
+        )
+
+        existing = result.scalar_one_or_none()
+
+        if not existing:
+
+            db.add(
+                User(
+                    telegram_id=user.id,
+                    username=user.username,
+                    full_name=user.full_name
+                )
+            )
+
+            await db.commit()
+
+
+# =========================
+# دکمه‌ها
+# =========================
 async def handle_buttons(message: types.Message):
 
     text = message.text
@@ -47,7 +121,7 @@ async def handle_buttons(message: types.Message):
 
     elif text == "👑 پنل ادمین":
 
-        if str(message.from_user.id) != str(7336595194):
+        if str(message.from_user.id) != str(ADMIN_ID):
             return
 
         keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -128,19 +202,14 @@ async def handle_buttons(message: types.Message):
 
     # ---------- درس ----------
 
-    elif "|" in text:
+    elif text.count("|") == 1:
 
-        parts = text.split("|")
+        grade, major = text.split("|")
 
-        if len(parts) == 2:
-
-            grade = parts[0]
-            major = parts[1]
-
-            await message.answer(
-                "درس رو انتخاب کن 👇",
-                reply_markup=subject_keyboard(grade, major)
-            )
+        await message.answer(
+            "درس رو انتخاب کن 👇",
+            reply_markup=subject_keyboard(grade, major)
+        )
 
 
     elif text in [
