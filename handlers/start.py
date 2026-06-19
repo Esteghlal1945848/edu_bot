@@ -10,19 +10,13 @@ from bot.keyboards.archive import (
     subject_keyboard
 )
 
-# مهم
-from handlers.upload import upload_state
+from handlers.state import upload_state
 
 
 ADMIN_ID = 7336595194
 
 
-# =========================
-# START
-# =========================
 async def cmd_start(message: types.Message):
-
-    user = message.from_user
 
     keyboard = types.ReplyKeyboardMarkup(
         resize_keyboard=True
@@ -33,105 +27,35 @@ async def cmd_start(message: types.Message):
         "🎥 ویدئو"
     )
 
-    keyboard.add(
-        "👨‍🏫 دبیر",
-        "🔍 جستجو"
-    )
+    if str(message.from_user.id) == str(ADMIN_ID):
 
-    if str(user.id) == str(ADMIN_ID):
-        keyboard.add("👑 پنل ادمین")
+        keyboard.add(
+            "👑 پنل ادمین"
+        )
 
     await message.answer(
-        f"🎓 خوش آمدی {user.full_name}\n\nاز منو انتخاب کن 👇",
+        "خوش اومدی 👇",
         reply_markup=keyboard
     )
 
-    async for db in get_db():
-
-        result = await db.execute(
-            select(User).where(
-                User.telegram_id == user.id
-            )
-        )
-
-        existing = result.scalar_one_or_none()
-
-        if not existing:
-
-            db.add(
-                User(
-                    telegram_id=user.id,
-                    username=user.username,
-                    full_name=user.full_name
-                )
-            )
-
-            await db.commit()
 
 
-# =========================
-# BUTTONS
-# =========================
 async def handle_buttons(message: types.Message):
 
-    text = message.text or ""
-    user_id = message.from_user.id
+    text = message.text
 
-
-    # ==================
-    # USER
-    # ==================
-
-    if text in ["📚 جزوه", "🎥 ویدئو"]:
-
-        await message.answer(
-            "کدوم پایه‌ای؟",
-            reply_markup=grade_keyboard()
-        )
-
-
-    elif text in ["دهم", "یازدهم", "دوازدهم"]:
-
-        await message.answer(
-            "رشته رو انتخاب کن 👇",
-            reply_markup=major_keyboard(text)
-        )
-
-
-    elif text.startswith("رشته:"):
-
-        grade, major = text.replace(
-            "رشته:",
-            ""
-        ).split("|")
-
-        await message.answer(
-            "درس رو انتخاب کن 👇",
-            reply_markup=subject_keyboard(
-                grade,
-                major
-            )
-        )
-
-
-    # ==================
-    # ADMIN PANEL
-    # ==================
-
-    elif text == "👑 پنل ادمین":
-
-        if str(user_id) != str(ADMIN_ID):
-            return
+    if text == "👑 پنل ادمین":
 
         keyboard = types.ReplyKeyboardMarkup(
             resize_keyboard=True
         )
 
-        keyboard.add("📤 آپلود جزوه")
-        keyboard.add("🎥 آپلود ویدئو")
+        keyboard.add(
+            "📤 آپلود جزوه"
+        )
 
         await message.answer(
-            "👑 پنل مدیریت",
+            "پنل مدیریت",
             reply_markup=keyboard
         )
 
@@ -142,31 +66,12 @@ async def handle_buttons(message: types.Message):
             resize_keyboard=True
         )
 
-        keyboard.add("آپلود جزوه | دهم")
-        keyboard.add("آپلود جزوه | یازدهم")
-        keyboard.add("آپلود جزوه | دوازدهم")
-
-        await message.answer(
-            "پایه را انتخاب کن 👇",
-            reply_markup=keyboard
+        keyboard.add(
+            "دهم|ریاضی"
         )
 
-
-    elif text.startswith("آپلود جزوه |"):
-
-        grade = text.split("|")[1].strip()
-
-        keyboard = types.ReplyKeyboardMarkup(
-            resize_keyboard=True
-        )
-
-        keyboard.add(f"{grade}|ریاضی")
-        keyboard.add(f"{grade}|تجربی")
-        keyboard.add(f"{grade}|انسانی")
-
         await message.answer(
-            "رشته را انتخاب کن 👇",
-            reply_markup=keyboard
+            "انتخاب کن"
         )
 
 
@@ -174,52 +79,28 @@ async def handle_buttons(message: types.Message):
 
         grade, major = text.split("|")
 
-        upload_state[user_id] = {
+        upload_state[
+            message.from_user.id
+        ] = {
+
             "mode": "admin_upload",
+
             "grade": grade,
-            "major": major,
-            "step": "subject"
+
+            "major": major
         }
 
         await message.answer(
-            "درس را انتخاب کن 👇",
-            reply_markup=subject_keyboard(
-                grade,
-                major
-            )
+            "درس رو انتخاب کن"
         )
 
 
-    elif text in [
+    elif text == "شیمی":
 
-        "فیزیک",
-        "شیمی",
-        "ریاضی",
-        "هندسه",
-        "ادبیات",
-        "عربی",
-        "زیست",
-        "منطق",
-        "اقتصاد",
-        "تاریخ",
-        "ریاضی و آمار",
-        "فارسی",
-        "حسابان",
-        "آمار و احتمال",
-        "جغرافیا",
-        "جامعه شناسی",
-        "روان شناسی",
-        "فلسفه",
-        "گسسته"
-
-    ]:
-
-        if user_id not in upload_state:
-            return
-
-        upload_state[user_id]["subject"] = text
-        upload_state[user_id]["step"] = "file"
+        upload_state[
+            message.from_user.id
+        ]["subject"] = "شیمی"
 
         await message.answer(
-            "📎 فایل را ارسال کن\n\nجزوه → PDF\nویدئو → MP4"
+            "📎 فایل بفرست"
         )
