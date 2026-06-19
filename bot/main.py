@@ -14,9 +14,7 @@ from handlers.upload import handle_file, handle_caption
 # Startup
 # =========================
 async def on_startup(dp):
-
     await init_db()
-
     print("Database initialized - Bot started!")
 
 
@@ -27,34 +25,42 @@ async def main():
 
     bot = Bot(token=os.getenv("BOT_TOKEN"))
 
-
     storage = RedisStorage2(
-
         host=os.getenv("REDIS_HOST", "redis"),
         port=int(os.getenv("REDIS_PORT", 6379)),
         password=os.getenv("REDIS_PASSWORD", "")
     )
 
-
     dp = Dispatcher(bot, storage=storage)
 
+    # =========================
+    # Handlers (ORDER IS IMPORTANT)
+    # =========================
 
-    # =========================
-    # Handlers
-    # =========================
+    # 1. Start command
     dp.register_message_handler(cmd_start, commands=["start"])
 
-    dp.register_message_handler(handle_buttons)
+    # 2. File upload (PDF / Video)
+    dp.register_message_handler(
+        handle_file,
+        content_types=["document", "video"]
+    )
 
-    dp.register_message_handler(handle_file, content_types=["document", "video"])
+    # 3. Caption (text after file)
+    dp.register_message_handler(
+        handle_caption,
+        content_types=types.ContentType.TEXT
+    )
 
-    dp.register_message_handler(handle_caption, content_types=types.ContentType.TEXT)
-
+    # 4. Buttons / normal text (LAST)
+    dp.register_message_handler(
+        handle_buttons,
+        content_types=types.ContentType.TEXT
+    )
 
     await on_startup(dp)
 
     print("Bot is running!")
-
 
     try:
         await dp.start_polling()
@@ -67,5 +73,4 @@ async def main():
 # Run
 # =========================
 if __name__ == "__main__":
-
     asyncio.run(main())
