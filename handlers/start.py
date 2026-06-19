@@ -10,6 +10,9 @@ from bot.keyboards.archive import (
 )
 
 
+ADMIN_ID = 7336595194
+
+
 async def cmd_start(message: types.Message):
 
     user = message.from_user
@@ -27,6 +30,12 @@ async def cmd_start(message: types.Message):
         "👨‍🏫 دبیر",
         "🔍 جستجو"
     )
+
+    if user.id == ADMIN_ID:
+
+        keyboard.add(
+            "👑 پنل ادمین"
+        )
 
     await message.answer(
         f"""
@@ -105,19 +114,33 @@ async def handle_buttons(message: types.Message):
     elif text == "🎥 ویدئو":
 
         await message.answer(
-            "بخش ویدئو"
+            "🎥 بخش ویدئو"
         )
 
 
     elif text == "👨‍🏫 دبیر":
 
         await message.answer(
-            "بخش دبیر"
+            "👨‍🏫 بخش دبیر"
         )
 
 
     elif text == "🔍 جستجو":
 
         await message.answer(
-            "عبارت جستجو را بفرست"
+            "عبارت جستجو را ارسال کن"
+        )
+
+
+    elif text == "👑 پنل ادمین":
+
+        if message.from_user.id != ADMIN_ID:
+            return
+
+        await message.answer(
+            """
+👑 پنل مدیریت
+
+📤 آپلود جزوه
+"""
         )
