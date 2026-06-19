@@ -11,7 +11,7 @@ from bot.keyboards.archive import (
 )
 
 
-ADMIN_ID = 123456789
+ADMIN_ID = 7336595194
 
 upload_state = {}
 
