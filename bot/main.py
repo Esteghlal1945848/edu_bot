@@ -1,50 +1,40 @@
 import asyncio
 
-from aiogram import Bot, Dispatcher
+from aiogram import Bot
+from aiogram import Dispatcher
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
 from config import BOT_TOKEN
 
-from handlers.start import (
-    cmd_start,
-    handle_buttons
-)
-
-from handlers.upload import (
-    handle_file
-)
+from handlers import start
+from handlers.upload import handle_file
 
 
-bot = Bot(
-    token=BOT_TOKEN
-)
+bot = Bot(token=BOT_TOKEN)
+
+storage = MemoryStorage()
 
 dp = Dispatcher(
     bot,
-    storage=MemoryStorage()
+    storage=storage
 )
 
 
 async def main():
 
-    dp.message_handlers.handlers.clear()
-
     dp.register_message_handler(
-        cmd_start,
+        start.cmd_start,
         commands=["start"]
     )
 
     dp.register_message_handler(
-        handle_buttons,
+        start.handle_buttons,
         content_types=["text"]
     )
 
     dp.register_message_handler(
         handle_file,
-        content_types=[
-            "document",
-            "video"
-        ]
+        content_types=["document", "video"]
     )
 
     print("BOT STARTED")
