@@ -25,9 +25,9 @@ async def main():
     )
 
     storage = RedisStorage2(
-        host=os.getenv("REDIS_HOST"),
-        port=int(os.getenv("REDIS_PORT")),
-        password=os.getenv("REDIS_PASSWORD")
+    host=os.getenv("REDIS_HOST", "redis"),
+    port=int(os.getenv("REDIS_PORT", 6379)),
+    password=os.getenv("REDIS_PASSWORD", "")
     )
 
     dp = Dispatcher(
