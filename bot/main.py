@@ -11,7 +11,7 @@ from handlers.upload import handle_file, handle_caption
 
 
 # =========================
-# Startup
+# STARTUP
 # =========================
 async def on_startup(dp):
     await init_db()
@@ -19,7 +19,7 @@ async def on_startup(dp):
 
 
 # =========================
-# Main
+# MAIN
 # =========================
 async def main():
 
@@ -34,29 +34,26 @@ async def main():
     dp = Dispatcher(bot, storage=storage)
 
     # =========================
-    # Handlers (ORDER IS IMPORTANT)
+    # HANDLERS ORDER (IMPORTANT)
     # =========================
 
-    # 1. Start command
+    # 1. /start
     dp.register_message_handler(cmd_start, commands=["start"])
 
-    # 2. File upload (PDF / Video)
+    # 2. file upload (PDF / Video)
     dp.register_message_handler(
         handle_file,
         content_types=["document", "video"]
     )
 
-    # 3. Caption (text after file)
+    # 3. caption after file
     dp.register_message_handler(
         handle_caption,
         content_types=types.ContentType.TEXT
     )
 
-    # 4. Buttons / normal text (LAST)
-    dp.register_message_handler(
-        handle_buttons,
-        content_types=types.ContentType.TEXT
-    )
+    # 4. all button / menu actions (LAST)
+    dp.register_message_handler(handle_buttons)
 
     await on_startup(dp)
 
@@ -70,7 +67,7 @@ async def main():
 
 
 # =========================
-# Run
+# RUN
 # =========================
 if __name__ == "__main__":
     asyncio.run(main())
