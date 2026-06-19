@@ -1,6 +1,6 @@
 from aiogram import types
 from database.core import get_db
-from database.models import File
+from database.models import Archive
 
 upload_state = {}
 
