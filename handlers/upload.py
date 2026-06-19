@@ -7,6 +7,9 @@ from database.models import Archive
 upload_state = {}
 
 
+# =========================
+# گرفتن فایل (PDF / Video)
+# =========================
 async def handle_file(message: types.Message):
 
     user_id = message.from_user.id
@@ -16,6 +19,7 @@ async def handle_file(message: types.Message):
 
 
     state = upload_state[user_id]
+
 
     file_id = None
     file_type = None
@@ -35,11 +39,44 @@ async def handle_file(message: types.Message):
 
     if not file_id:
 
-        await message.answer(
-            "فقط PDF یا MP4 بفرست"
-        )
-
+        await message.answer("فقط PDF یا MP4 بفرست")
         return
+
+
+    # ذخیره موقت برای مرحله caption
+    upload_state[user_id] = {
+
+        "grade": state["grade"],
+        "major": state["major"],
+        "subject": state["subject"],
+        "file_id": file_id,
+        "type": file_type,
+        "step": "caption"
+    }
+
+
+    await message.answer("✍️ حالا توضیح (caption) رو بنویس")
+
+
+# =========================
+# گرفتن توضیح (caption)
+# =========================
+async def handle_caption(message: types.Message):
+
+    user_id = message.from_user.id
+
+    if user_id not in upload_state:
+        return
+
+
+    state = upload_state[user_id]
+
+
+    if state.get("step") != "caption":
+        return
+
+
+    caption = message.text
 
 
     async for db in get_db():
@@ -48,32 +85,20 @@ async def handle_file(message: types.Message):
 
             Archive(
 
-                type=file_type,
-
+                type=state["type"],
                 grade=state["grade"],
-
                 major=state["major"],
-
                 subject=state["subject"],
-
-                file_id=file_id,
-
-                caption=None,
-
+                file_id=state["file_id"],
+                caption=caption,
                 uploaded_by=user_id
             )
-
         )
 
         await db.commit()
 
 
-    upload_state.pop(
-        user_id,
-        None
-    )
+    upload_state.pop(user_id, None)
 
 
-    await message.answer(
-        "✅ فایل ذخیره شد"
-    )
+    await message.answer("✅ فایل با موفقیت ذخیره شد")
