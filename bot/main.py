@@ -1,39 +1,27 @@
-import os
 import asyncio
-import logging
 
-from aiogram import Bot, Dispatcher, types
-from aiogram.contrib.fsm_storage.redis import RedisStorage2
+from aiogram import Bot
+from aiogram import Dispatcher
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from aiogram.utils import executor
+
+from config import BOT_TOKEN
 
 from handlers import start
-from database.core import init_db
+from handlers.upload import handle_file
 
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+bot = Bot(token=BOT_TOKEN)
 
+storage = MemoryStorage()
 
-async def on_startup(dp):
-    await init_db()
-    logger.info("Database initialized - Bot started!")
+dp = Dispatcher(
+    bot,
+    storage=storage
+)
 
 
 async def main():
-
-    bot = Bot(
-        token=os.getenv("BOT_TOKEN")
-    )
-
-    storage = RedisStorage2(
-    host=os.getenv("REDIS_HOST", "redis"),
-    port=int(os.getenv("REDIS_PORT", 6379)),
-    password=os.getenv("REDIS_PASSWORD", "")
-    )
-
-    dp = Dispatcher(
-        bot,
-        storage=storage
-    )
 
     dp.register_message_handler(
         start.cmd_start,
@@ -41,19 +29,17 @@ async def main():
     )
 
     dp.register_message_handler(
-        start.handle_buttons,
-        content_types=types.ContentTypes.TEXT
+        start.handle_buttons
     )
 
-    await on_startup(dp)
+    dp.register_message_handler(
+        handle_file,
+        content_types=["document", "video"]
+    )
 
-    logger.info("Bot is running!")
+    print("BOT STARTED")
 
-    try:
-        await dp.start_polling()
-
-    finally:
-        await bot.session.close()
+    await dp.start_polling()
 
 
 if __name__ == "__main__":
