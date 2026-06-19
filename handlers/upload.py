@@ -25,12 +25,10 @@ async def handle_file(message: types.Message):
     file_type = None
 
     if message.document:
-
         file_id = message.document.file_id
         file_type = "pdf"
 
     elif message.video:
-
         file_id = message.video.file_id
         file_type = "video"
 
@@ -42,15 +40,9 @@ async def handle_file(message: types.Message):
 
         return
 
-    upload_state[user_id].update({
-
-        "file_id": file_id,
-
-        "type": file_type,
-
-        "step": "caption"
-
-    })
+    upload_state[user_id]["file_id"] = file_id
+    upload_state[user_id]["type"] = file_type
+    upload_state[user_id]["step"] = "caption"
 
     await message.answer(
         "✍️ حالا توضیحات رو بنویس"
@@ -62,41 +54,47 @@ async def handle_file(message: types.Message):
 # =========================
 async def handle_caption(message: types.Message):
 
+    await message.answer(
+        "DEBUG: handle_caption اجرا شد"
+    )
+
     user_id = message.from_user.id
 
     state = upload_state.get(user_id)
 
     if not state:
+
+        await message.answer(
+            "DEBUG: state پیدا نشد"
+        )
+
         return
 
     if state.get("step") != "caption":
+
+        await message.answer(
+            "DEBUG: step اشتباهه"
+        )
+
         return
 
     try:
 
         async for db in get_db():
 
-            db.add(
+            archive = Archive(
 
-                Archive(
-
-                    type=state["type"],
-
-                    grade=state["grade"],
-
-                    major=state["major"],
-
-                    subject=state["subject"],
-
-                    file_id=state["file_id"],
-
-                    caption=message.text,
-
-                    uploaded_by=user_id
-
-                )
+                type=state["type"],
+                grade=state["grade"],
+                major=state["major"],
+                subject=state["subject"],
+                file_id=state["file_id"],
+                caption=message.text,
+                uploaded_by=user_id
 
             )
+
+            db.add(archive)
 
             await db.commit()
 
@@ -112,5 +110,5 @@ async def handle_caption(message: types.Message):
     except Exception as e:
 
         await message.answer(
-            f"❌ خطا:\n{e}"
+            f"❌ خطا:\n{str(e)}"
         )
