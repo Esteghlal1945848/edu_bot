@@ -3,27 +3,31 @@ from database.core import get_db
 from database.models import Archive
 
 # =========================
-# TEMP STATE (simple FSM)
+# TEMP STATE
 # =========================
 upload_state = {}
 
 
 # =========================
-# STEP 1: RECEIVE FILE
+# STEP 1: RECEIVE FILE (ADMIN)
 # =========================
 async def handle_file(message: types.Message):
     user_id = message.from_user.id
 
-    # اگر کاربر وارد مرحله آپلود نشده
-    if user_id not in upload_state:
+    state = upload_state.get(user_id)
+
+    # ❌ اگر وارد flow نشده، هیچ کاری نکن
+    if not state:
         return
 
-    state = upload_state[user_id]
+    # ❌ فقط مخصوص ادمین آپلود
+    if state.get("mode") != "admin_upload":
+        return
 
     file_id = None
     file_type = None
 
-    # بررسی نوع فایل
+    # گرفتن فایل
     if message.document:
         file_id = message.document.file_id
         file_type = "pdf"
@@ -36,8 +40,9 @@ async def handle_file(message: types.Message):
         await message.answer("❌ فقط PDF یا MP4 بفرست")
         return
 
-    # ذخیره مرحله بعد (caption)
+    # رفتن به مرحله caption
     upload_state[user_id] = {
+        "mode": "admin_upload",
         "grade": state["grade"],
         "major": state["major"],
         "subject": state["subject"],
@@ -55,13 +60,12 @@ async def handle_file(message: types.Message):
 async def handle_caption(message: types.Message):
     user_id = message.from_user.id
 
-    # اگر اصلاً وارد flow نشده
-    if user_id not in upload_state:
+    state = upload_state.get(user_id)
+
+    if not state:
         return
 
-    state = upload_state[user_id]
-
-    # فقط وقتی در مرحله caption هستیم
+    # فقط مرحله caption
     if state.get("step") != "caption":
         return
 
@@ -88,13 +92,14 @@ async def handle_caption(message: types.Message):
 
 
 # =========================
-# OPTIONAL: START UPLOAD FLOW
-# (اگر دکمه "آپلود" داری)
+# STEP 0: START UPLOAD (ADMIN ONLY)
+# اینو باید از دکمه "جزوه دهم شیمی" صدا بزنی
 # =========================
-async def start_upload(message: types.Message, grade: str, major: str, subject: str):
+async def start_admin_upload(message: types.Message, grade: int, major: str, subject: str):
     user_id = message.from_user.id
 
     upload_state[user_id] = {
+        "mode": "admin_upload",
         "grade": grade,
         "major": major,
         "subject": subject,
