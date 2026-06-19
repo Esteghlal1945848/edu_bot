@@ -53,6 +53,9 @@ async def cmd_start(message: types.Message):
 
 async def handle_buttons(message: types.Message):
 
+    await message.answer("DEBUG HANDLE")
+
+    text = message.text
     text = message.text
 
     if text == "👑 پنل ادمین":
