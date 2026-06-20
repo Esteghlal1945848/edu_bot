@@ -12,6 +12,7 @@ from bot.keyboards.archive import (
     publisher_keyboard,
     subject_keyboard,
     book_subject_keyboard,
+    book_publisher_keyboard,
     teacher_keyboard
 )
 from handlers.state import upload_state
@@ -43,12 +44,14 @@ async def handle_buttons(message: types.Message):
     text = message.text
     user_id = message.from_user.id
 
+    # ===================== پنل ادمین =====================
     if text == "👑 پنل ادمین":
         kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
         kb.add("⚡ آپلود سریع", "📤 آپلود جزوه", "🎥 آپلود ویدئو", "📖 آپلود کتاب", "📋 لیست فایل‌ها", "🗑 حذف فایل", "📊 آمار")
         await message.answer("👑 **پنل مدیریت**", reply_markup=kb, parse_mode="Markdown")
         return
 
+    # ===================== آپلود سریع =====================
     if text == "⚡ آپلود سریع":
         upload_state[user_id] = {"mode": "fast_upload", "step": "waiting_for_file"}
         await message.answer(
@@ -64,37 +67,56 @@ async def handle_buttons(message: types.Message):
         )
         return
 
+    # ===================== آپلود کتاب (ادمین) =====================
     if text == "📖 آپلود کتاب":
         upload_state[user_id] = {"mode": "book_upload", "category": "book", "type": "pdf", "step": "publisher"}
         await message.answer("📖 **آپلود کتاب کمک آموزشی**\n\nناشر رو انتخاب کن:", reply_markup=publisher_keyboard())
         return
 
+    # ===================== آپلود جزوه =====================
     if text == "📤 آپلود جزوه":
         upload_state[user_id] = {"mode": "admin_upload", "category": "pdf", "type": "pdf", "step": "grade"}
         await message.answer("پایه را انتخاب کن", reply_markup=grade_keyboard())
         return
 
+    # ===================== آپلود ویدئو =====================
     if text == "🎥 آپلود ویدئو":
         upload_state[user_id] = {"mode": "admin_upload", "category": "video", "type": "video", "step": "grade"}
         await message.answer("پایه را انتخاب کن", reply_markup=grade_keyboard())
         return
 
+    # ===================== GRADE =====================
     if text in ["دهم", "یازدهم", "دوازدهم"]:
+        # حالت کتاب (دانلود)
+        if user_id in upload_state and upload_state[user_id].get("step") == "book_grade":
+            upload_state[user_id]["grade"] = text
+            upload_state[user_id]["step"] = "book_major"
+            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            kb.add(KeyboardButton(f"رشته:{text}|ریاضی"))
+            kb.add(KeyboardButton(f"رشته:{text}|تجربی"))
+            await message.answer("📖 رشته را انتخاب کن:", reply_markup=kb)
+            return
+
+        # حالت آپلود کتاب (ادمین)
         if user_id in upload_state and upload_state[user_id].get("mode") == "book_upload":
             upload_state[user_id]["grade"] = text
             upload_state[user_id]["step"] = "major"
             await message.answer("رشته را انتخاب کن", reply_markup=major_keyboard(text))
             return
-        elif user_id in upload_state and upload_state[user_id].get("mode") == "admin_upload":
+
+        # حالت آپلود جزوه/ویدیو
+        if user_id in upload_state and upload_state[user_id].get("mode") == "admin_upload":
             upload_state[user_id]["grade"] = text
             upload_state[user_id]["step"] = "major"
             await message.answer("رشته را انتخاب کن", reply_markup=major_keyboard(text))
             return
-        else:
-            upload_state[user_id] = {"mode": "user_download", "step": "major", "grade": text}
-            await message.answer("رشته را انتخاب کن", reply_markup=major_keyboard(text))
-            return
 
+        # دانلود عادی
+        upload_state[user_id] = {"mode": "user_download", "step": "major", "grade": text}
+        await message.answer("رشته را انتخاب کن", reply_markup=major_keyboard(text))
+        return
+
+    # ===================== ناشران (برای آپلود کتاب - ادمین) =====================
     if text in ["خیلی سبز", "نشر الگو", "گاج"]:
         if user_id in upload_state and upload_state[user_id].get("mode") == "book_upload":
             upload_state[user_id]["publisher"] = text
@@ -102,55 +124,87 @@ async def handle_buttons(message: types.Message):
             await message.answer("پایه را انتخاب کن", reply_markup=grade_keyboard())
             return
 
+    # ===================== MAJOR =====================
     if text.startswith("رشته:"):
         if user_id not in upload_state:
             await message.answer("❌ لطفاً از ابتدا شروع کن")
             return
         grade, major = text.replace("رشته:", "").split("|")
         state = upload_state[user_id]
+
+        # کتاب (دانلود)
+        if state.get("step") == "book_major":
+            state["grade"] = grade
+            state["major"] = major
+            state["step"] = "book_publisher"
+            await message.answer(
+                "📖 ناشر مورد نظر رو انتخاب کن:",
+                reply_markup=book_publisher_keyboard(grade, major)
+            )
+            return
+
+        # آپلود کتاب (ادمین)
         if state.get("mode") == "book_upload":
             state["grade"] = grade
             state["major"] = major
             state["step"] = "book_subject"
-            await message.answer("📖 درس مورد نظر رو انتخاب کن:", reply_markup=book_subject_keyboard(state["publisher"], grade, major))
+            await message.answer(
+                "📖 درس مورد نظر رو انتخاب کن:",
+                reply_markup=book_subject_keyboard(state["publisher"], grade, major)
+            )
             return
-        elif state.get("mode") == "admin_upload":
+
+        # آپلود جزوه/ویدیو
+        if state.get("mode") == "admin_upload":
             state["grade"] = grade
             state["major"] = major
             state["step"] = "institute"
             await message.answer("🏛 موسسه را انتخاب کن", reply_markup=institute_keyboard())
             return
-        elif state.get("mode") == "user_download":
+
+        # دانلود عادی
+        if state.get("mode") == "user_download":
             state["grade"] = grade
             state["major"] = major
             state["step"] = "institute"
             await message.answer("🏛 موسسه/ناشر را انتخاب کن", reply_markup=institute_keyboard())
             return
 
+    # ===================== کتاب: انتخاب ناشر (دانلود) =====================
+    if text in ["نشر الگو", "خیلی سبز", "نردبام", "فرمول بیست", "IQ"]:
+        if user_id in upload_state and upload_state[user_id].get("step") == "book_publisher":
+            state = upload_state[user_id]
+            state["publisher"] = text
+            state["step"] = "book_subject_download"
+            await message.answer(
+                "📖 درس مورد نظر رو انتخاب کن:",
+                reply_markup=book_subject_keyboard(text, state["grade"], state["major"])
+            )
+            return
+
+    # ===================== کتاب: انتخاب درس (دانلود) =====================
+    if user_id in upload_state and upload_state[user_id].get("step") == "book_subject_download":
+        state = upload_state[user_id]
+        state["subject"] = text
+        await show_book_archives(message, state)
+        return
+
+    # ===================== کتاب: انتخاب درس (آپلود ادمین) =====================
     if user_id in upload_state and upload_state[user_id].get("step") == "book_subject":
         state = upload_state[user_id]
         state["subject"] = text
-        state["step"] = "book_name"
-        if state.get("publisher") == "خیلی سبز":
-            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            kb.add("معمولی", "نردبام")
-            await message.answer("📖 نوع کتاب رو انتخاب کن:\n🔹 معمولی\n🔹 نردبام", reply_markup=kb)
-        else:
-            state["book_name"] = "معمولی"
-            state["step"] = "waiting_for_file"
-            kb = types.ReplyKeyboardMarkup(resize_keyboard=True).add("❌ لغو")
-            await message.answer(f"✅ اطلاعات ثبت شد:\n📖 {state['publisher']} - {state['grade']} - {state['major']} - {state['subject']}\n\n📤 حالا فایل رو ارسال کن (PDF)", reply_markup=kb)
+        state["step"] = "waiting_for_file"
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add("❌ لغو")
+        await message.answer(
+            f"✅ اطلاعات ثبت شد:\n"
+            f"📖 {state['publisher']} - {state['grade']} - {state['major']} - {state['subject']}\n\n"
+            f"📤 حالا فایل رو ارسال کن (PDF)",
+            reply_markup=kb
+        )
         return
 
-    if text in ["معمولی", "نردبام"]:
-        if user_id in upload_state and upload_state[user_id].get("step") == "book_name":
-            state = upload_state[user_id]
-            state["book_name"] = text
-            state["step"] = "waiting_for_file"
-            kb = types.ReplyKeyboardMarkup(resize_keyboard=True).add("❌ لغو")
-            await message.answer(f"✅ اطلاعات ثبت شد:\n📖 {state['publisher']} - {state['grade']} - {state['major']} - {state['subject']}\n📌 نوع: {text}\n\n📤 حالا فایل رو ارسال کن (PDF)", reply_markup=kb)
-            return
-
+    # ===================== موسسه (جزوه/ویدیو) =====================
     if text in ["ماز", "آلفا اسکول", "تایتان", "کلاسینو"]:
         if user_id not in upload_state:
             await message.answer("❌ لطفاً از ابتدا شروع کن")
@@ -161,12 +215,13 @@ async def handle_buttons(message: types.Message):
             state["step"] = "subject"
             await message.answer("📚 درس را انتخاب کن", reply_markup=subject_keyboard(state["grade"], state["major"]))
             return
-        elif state.get("mode") == "user_download":
+        if state.get("mode") == "user_download":
             state["institute"] = text
             state["step"] = "subject"
             await message.answer("📚 درس را انتخاب کن", reply_markup=subject_keyboard(state["grade"], state["major"]))
             return
 
+    # ===================== درس (جزوه/ویدیو) =====================
     if user_id in upload_state and upload_state[user_id].get("step") == "subject":
         state = upload_state[user_id]
         state["subject"] = text
@@ -175,12 +230,13 @@ async def handle_buttons(message: types.Message):
             kb = teacher_keyboard(state["grade"], state["major"], state["institute"], text)
             await message.answer("👨‍🏫 دبیر را انتخاب کن", reply_markup=kb)
             return
-        elif state.get("mode") == "user_download":
+        if state.get("mode") == "user_download":
             state["step"] = "teacher"
             kb = teacher_keyboard(state["grade"], state["major"], state["institute"], text)
             await message.answer("👨‍🏫 دبیر را انتخاب کن", reply_markup=kb)
             return
 
+    # ===================== دبیر (جزوه/ویدیو) =====================
     if user_id in upload_state and upload_state[user_id].get("step") == "teacher":
         state = upload_state[user_id]
         state["teacher"] = text
@@ -190,10 +246,11 @@ async def handle_buttons(message: types.Message):
             kb.add("❌ لغو", "⚡ ادامه")
             await message.answer(f"✅ دبیر {text} انتخاب شد.\n\n📤 حالا فایل رو ارسال کن (PDF یا ویدیو)", reply_markup=kb)
             return
-        elif state.get("mode") == "user_download":
+        if state.get("mode") == "user_download":
             await show_archives(message, state)
             return
 
+    # ===================== ادامه آپلود =====================
     if text == "⚡ ادامه":
         if user_id in upload_state:
             state = upload_state[user_id]
@@ -202,6 +259,7 @@ async def handle_buttons(message: types.Message):
             await message.answer("📤 فایل بعدی رو بفرست", reply_markup=kb)
             return
 
+    # ===================== لغو =====================
     if text == "❌ لغو":
         if user_id in upload_state:
             del upload_state[user_id]
@@ -212,25 +270,68 @@ async def handle_buttons(message: types.Message):
         await message.answer("❌ آپلود لغو شد", reply_markup=kb)
         return
 
+    # ===================== دانلود کاربر =====================
     if text in ["📚 جزوه", "🎥 ویدئو", "📖 کتاب کمک آموزشی"]:
         category_map = {"📚 جزوه": "pdf", "🎥 ویدئو": "video", "📖 کتاب کمک آموزشی": "book"}
-        upload_state[user_id] = {"mode": "user_download", "step": "grade", "category": category_map.get(text, "pdf")}
-        await message.answer("کدوم پایه؟", reply_markup=grade_keyboard())
+        if text == "📖 کتاب کمک آموزشی":
+            upload_state[user_id] = {"mode": "user_download", "step": "book_grade", "category": "book"}
+            await message.answer("📖 کدوم پایه؟", reply_markup=grade_keyboard())
+        else:
+            upload_state[user_id] = {"mode": "user_download", "step": "grade", "category": category_map.get(text, "pdf")}
+            await message.answer("کدوم پایه؟", reply_markup=grade_keyboard())
         return
 
+    # ===================== لیست فایل‌ها =====================
     if text == "📋 لیست فایل‌ها":
         await list_files(message)
         return
 
+    # ===================== حذف فایل =====================
     if text == "🗑 حذف فایل":
         upload_state[user_id] = {"mode": "admin_delete", "step": "waiting_for_file_id"}
         await message.answer("🗑 آیدی فایل مورد نظر برای حذف رو وارد کن:\n\nمثلاً: `file_123456789`", parse_mode="Markdown")
         return
 
+    # ===================== آمار =====================
     if text == "📊 آمار":
         await show_stats(message)
         return
 
+# ===================== نمایش کتاب‌ها =====================
+async def show_book_archives(message: types.Message, state: dict):
+    user_id = message.from_user.id
+    async for db in get_db():
+        query = select(Archive).where(
+            Archive.category == "book",
+            Archive.grade == state["grade"],
+            Archive.major == state["major"],
+            Archive.institute == state["publisher"],
+            Archive.subject == state["subject"]
+        )
+        result = await db.execute(query)
+        archives = result.scalars().all()
+    if not archives:
+        await message.answer(f"❌ هیچ کتابی برای این انتخاب‌ها پیدا نشد\n\n📖 {state['publisher']} - {state['grade']} - {state['major']} - {state['subject']}")
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add("📚 جزوه", "🎥 ویدئو", "📖 کتاب کمک آموزشی")
+        if str(user_id) == str(ADMIN_ID):
+            kb.add("👑 پنل ادمین")
+        await message.answer("به منوی اصلی برگشتی", reply_markup=kb)
+        if user_id in upload_state:
+            del upload_state[user_id]
+        return
+    for archive in archives:
+        caption = f"📖 {archive.file_name}\n📌 {archive.book_name or 'معمولی'}"
+        await message.answer_document(archive.file_id, caption=caption)
+    if user_id in upload_state:
+        del upload_state[user_id]
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add("📚 جزوه", "🎥 ویدئو", "📖 کتاب کمک آموزشی")
+    if str(user_id) == str(ADMIN_ID):
+        kb.add("👑 پنل ادمین")
+    await message.answer("✅ همه کتاب‌ها ارسال شد", reply_markup=kb)
+
+# ===================== لیست فایل‌ها =====================
 async def list_files(message: types.Message):
     async for db in get_db():
         result = await db.execute(select(Archive).order_by(Archive.id.desc()).limit(20))
@@ -253,6 +354,7 @@ async def list_files(message: types.Message):
         )
     await message.answer(f"✅ {len(files)} فایل آخر نمایش داده شد")
 
+# ===================== حذف فایل =====================
 async def delete_file(message: types.Message, file_id: str):
     user_id = message.from_user.id
     async for db in get_db():
@@ -270,6 +372,7 @@ async def delete_file(message: types.Message, file_id: str):
     kb.add("⚡ آپلود سریع", "📤 آپلود جزوه", "🎥 آپلود ویدئو", "📖 آپلود کتاب", "📋 لیست فایل‌ها", "🗑 حذف فایل", "📊 آمار")
     await message.answer("👑 پنل مدیریت", reply_markup=kb)
 
+# ===================== آمار =====================
 async def show_stats(message: types.Message):
     async for db in get_db():
         users_count = await db.scalar(select(func.count()).select_from(User))
@@ -290,6 +393,7 @@ async def show_stats(message: types.Message):
     kb.add("⚡ آپلود سریع", "📤 آپلود جزوه", "🎥 آپلود ویدئو", "📖 آپلود کتاب", "📋 لیست فایل‌ها", "🗑 حذف فایل", "📊 آمار")
     await message.answer("👑 پنل مدیریت", reply_markup=kb)
 
+# ===================== نمایش جزوه/ویدیو =====================
 async def show_archives(message: types.Message, state: dict):
     user_id = message.from_user.id
     category = state.get("category", "pdf")
@@ -333,6 +437,7 @@ async def show_archives(message: types.Message, state: dict):
         kb.add("👑 پنل ادمین")
     await message.answer("✅ همه فایل‌ها ارسال شد", reply_markup=kb)
 
+# ===================== آپلود فایل =====================
 async def handle_file(message: types.Message):
     user_id = message.from_user.id
     if user_id not in upload_state:
@@ -340,6 +445,7 @@ async def handle_file(message: types.Message):
         return
     state = upload_state[user_id]
 
+    # آپلود سریع
     if state.get("mode") == "fast_upload":
         caption = message.caption or ""
         parts = [p.strip() for p in caption.split("|")]
@@ -376,6 +482,7 @@ async def handle_file(message: types.Message):
         await message.answer(f"✅ فایل با موفقیت ثبت شد!\n📚 {institute} - {grade} - {major} - {subject}", reply_markup=kb)
         return
 
+    # آپلود کتاب (ادمین)
     if state.get("mode") == "book_upload" and state.get("step") == "waiting_for_file":
         if not message.document:
             await message.answer("❌ لطفاً فایل PDF کتاب رو ارسال کن")
@@ -401,6 +508,7 @@ async def handle_file(message: types.Message):
         await message.answer(f"✅ کتاب با موفقیت ثبت شد!\n📖 {state['publisher']} - {state['grade']} - {state['major']} - {state['subject']}", reply_markup=kb)
         return
 
+    # آپلود جزوه/ویدیو (ادمین)
     if state.get("mode") != "admin_upload":
         await message.answer("❌ شما در حالت دانلود هستید")
         return
