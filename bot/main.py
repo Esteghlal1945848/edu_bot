@@ -2,7 +2,6 @@ import asyncio
 import os
 
 from aiogram import Bot, Dispatcher
-
 from aiogram.contrib.fsm_storage.redis import (
     RedisStorage2
 )
@@ -15,8 +14,7 @@ from handlers.start import (
 )
 
 from handlers.upload import (
-    handle_file,
-    handle_caption
+    handle_file
 )
 
 
@@ -84,11 +82,6 @@ async def main():
     # دکمه‌ها
     dp.register_message_handler(
         handle_buttons
-    )
-
-    # کپشن
-    dp.register_message_handler(
-        handle_caption
     )
 
     await on_startup(dp)
