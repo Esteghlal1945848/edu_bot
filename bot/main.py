@@ -18,49 +18,66 @@ from handlers.start import (
 
 
 ADMIN_ID = 7336595194
-CHANNEL_ID = -1003918140957  # آیدی کانال خصوصی خودت رو اینجا بذار
+CHANNEL_ID = -1003918140957  # آیدی کانال خصوصی
 
 
 # =========================
-# دریافت خودکار فایل از کانال خصوصی
+# دریافت فایل از کانال (مستقیم یا فورواردی)
 # =========================
 async def auto_save_from_channel(message: types.Message):
     
-    # چک کن که پیام از کانال ماست
-    if message.chat.id != CHANNEL_ID:
+    # چک کن پیام از کانال اومده یا فوروارد شده از کانال
+    is_from_channel = False
+    chat_id = None
+    
+    # حالت ۱: پیام مستقیم از کانال
+    if message.chat.id == CHANNEL_ID:
+        is_from_channel = True
+        chat_id = message.chat.id
+    
+    # حالت ۲: پیام فوروارد شده از کانال
+    elif message.forward_from_chat and message.forward_from_chat.id == CHANNEL_ID:
+        is_from_channel = True
+        chat_id = message.forward_from_chat.id
+    
+    # اگه از کانال نبود، رد کن
+    if not is_from_channel:
         return
     
     # فقط اگه ادمین فرستاده باشه
     if message.from_user.id != ADMIN_ID:
+        await message.answer("❌ فقط ادمین میتونه فایل فوروارد کنه")
         return
     
     # اگر فایل نبود، هیچ کاری نکن
     if not message.document and not message.video:
+        await message.answer("❌ لطفاً فایل رو فوروارد کن")
         return
     
-    # گرفتن کپشن پیام
+    # گرفتن کپشن پیام (همون کپشنی که توی کانال ویرایش کردی)
     caption = message.caption or ""
     
     # پیدا کردن هشتگ‌ها از کپشن
     tags = re.findall(r'#([^#\s]+)', caption)
     
-    # حذف فاصله‌های اضافی از هشتگ‌ها
+    # حذف فاصله‌های اضافی
     tags = [t.strip() for t in tags]
     
-    # اگر هشتگ‌ها کم بود، پیام بده
+    # اگه هشتگ کم بود، راهنمایی کن
     if len(tags) < 5:
         await message.answer(
-            "❌ کپشن باید حداقل ۵ هشتگ داشته باشه:\n"
-            "#موسسه #پایه #رشته #درس #دبیر"
+            "❌ کپشن باید ۵ هشتگ داشته باشه:\n"
+            "#موسسه #پایه #رشته #درس #دبیر\n\n"
+            "مثال: #تایتان #دهم #ریاضی #شیمی #فراهانی"
         )
         return
     
-    # تبدیل هشتگ‌ها به متن بدون هشتگ برای ذخیره در دیتابیس
-    institute = tags[0].replace("_", " ") if len(tags) > 0 else ""
-    grade = tags[1].replace("_", " ") if len(tags) > 1 else ""
-    major = tags[2].replace("_", " ") if len(tags) > 2 else ""
-    subject = tags[3].replace("_", " ") if len(tags) > 3 else ""
-    teacher = tags[4].replace("_", " ") if len(tags) > 4 else ""
+    # تبدیل هشتگ به متن معمولی
+    institute = tags[0].replace("_", " ")
+    grade = tags[1].replace("_", " ")
+    major = tags[2].replace("_", " ")
+    subject = tags[3].replace("_", " ")
+    teacher = tags[4].replace("_", " ")
     
     # ذخیره در دیتابیس
     async for db in get_db():
@@ -80,6 +97,7 @@ async def auto_save_from_channel(message: types.Message):
         db.add(archive)
         await db.commit()
     
+    # پیام موفقیت
     await message.answer(
         f"✅ فایل با موفقیت ذخیره شد!\n"
         f"📚 {institute} - {grade} - {major} - {subject} - {teacher}"
@@ -104,71 +122,49 @@ async def on_startup(dp):
 async def main():
 
     bot = Bot(
-        token=os.getenv(
-            "BOT_TOKEN"
-        )
+        token=os.getenv("BOT_TOKEN")
     )
 
     storage = RedisStorage2(
-
-        host=os.getenv(
-            "REDIS_HOST",
-            "redis"
-        ),
-
-        port=int(
-            os.getenv(
-                "REDIS_PORT",
-                6379
-            )
-        ),
-
-        password=os.getenv(
-            "REDIS_PASSWORD",
-            ""
-        )
+        host=os.getenv("REDIS_HOST", "redis"),
+        port=int(os.getenv("REDIS_PORT", 6379)),
+        password=os.getenv("REDIS_PASSWORD", "")
     )
 
-    dp = Dispatcher(
-        bot,
-        storage=storage
-    )
+    dp = Dispatcher(bot, storage=storage)
 
     # =====================
     # ثبت هندلرها
     # =====================
 
-    # استارت
+    # اول: دریافت از کانال (مستقیم یا فورواردی)
+    dp.register_message_handler(
+        auto_save_from_channel,
+        content_types=['document', 'video']
+    )
+
+    # دوم: استارت
     dp.register_message_handler(
         cmd_start,
         commands=["start"]
     )
 
-    # دکمه‌ها
+    # سوم: دکمه‌ها
     dp.register_message_handler(
         handle_buttons
     )
 
-    # آپلود فایل توسط ادمین (از طریق پنل)
+    # چهارم: آپلود دستی
     dp.register_message_handler(
         handle_file,
-        content_types=['document', 'video']
-    )
-
-    # دریافت خودکار از کانال خصوصی
-    dp.register_message_handler(
-        auto_save_from_channel,
         content_types=['document', 'video']
     )
 
     await on_startup(dp)
 
     try:
-
         await dp.start_polling()
-
     finally:
-
         await bot.session.close()
 
 
@@ -176,5 +172,4 @@ async def main():
 # RUN
 # =========================
 if __name__ == "__main__":
-
     asyncio.run(main())
