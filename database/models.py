@@ -12,7 +12,6 @@ class User(Base):
 
     __tablename__ = "users"
 
-
     id = Column(
         Integer,
         primary_key=True
@@ -37,45 +36,44 @@ class Archive(Base):
 
     __tablename__ = "archives"
 
-
     id = Column(
         Integer,
         primary_key=True
     )
 
-
     type = Column(
         String
     )
-    # pdf
-    # video
-
+    # pdf / video
 
     grade = Column(
         String
     )
 
-
     major = Column(
         String
     )
 
+    institute = Column(
+        String
+    )
 
     subject = Column(
         String
     )
 
+    teacher = Column(
+        String
+    )
 
     file_id = Column(
         String
     )
 
-
     caption = Column(
         String,
         nullable=True
     )
-
 
     uploaded_by = Column(
         BigInteger
