@@ -94,7 +94,7 @@ async def handle_buttons(message: types.Message):
     # ===================== GRADE =====================
     if text in ["دهم", "یازدهم", "دوازدهم"]:
         
-        # ===== حالت کتاب (دانلود) =====
+        # 1️⃣ اول: کتاب (دانلود)
         if user_id in upload_state and upload_state[user_id].get("step") == "book_grade":
             upload_state[user_id]["grade"] = text
             upload_state[user_id]["step"] = "book_major"
@@ -104,21 +104,21 @@ async def handle_buttons(message: types.Message):
             await message.answer("📖 رشته را انتخاب کن:", reply_markup=kb)
             return
 
-        # ===== حالت آپلود کتاب (ادمین) =====
+        # 2️⃣ دوم: آپلود کتاب (ادمین)
         if user_id in upload_state and upload_state[user_id].get("mode") == "book_upload":
             upload_state[user_id]["grade"] = text
             upload_state[user_id]["step"] = "major"
             await message.answer("رشته را انتخاب کن", reply_markup=major_keyboard(text))
             return
 
-        # ===== حالت آپلود جزوه/ویدیو =====
+        # 3️⃣ سوم: آپلود جزوه/ویدیو
         if user_id in upload_state and upload_state[user_id].get("mode") == "admin_upload":
             upload_state[user_id]["grade"] = text
             upload_state[user_id]["step"] = "major"
             await message.answer("رشته را انتخاب کن", reply_markup=major_keyboard(text))
             return
 
-        # ===== دانلود عادی (جزوه/ویدیو) =====
+        # 4️⃣ آخر: دانلود عادی (جزوه/ویدیو)
         upload_state[user_id] = {"mode": "user_download", "step": "major", "grade": text}
         await message.answer("رشته را انتخاب کن", reply_markup=major_keyboard(text))
         return
@@ -139,7 +139,7 @@ async def handle_buttons(message: types.Message):
         grade, major = text.replace("رشته:", "").split("|")
         state = upload_state[user_id]
 
-        # ===== کتاب (دانلود) =====
+        # کتاب (دانلود)
         if state.get("step") == "book_major":
             state["grade"] = grade
             state["major"] = major
@@ -150,7 +150,7 @@ async def handle_buttons(message: types.Message):
             )
             return
 
-        # ===== آپلود کتاب (ادمین) =====
+        # آپلود کتاب (ادمین)
         if state.get("mode") == "book_upload":
             state["grade"] = grade
             state["major"] = major
@@ -161,7 +161,7 @@ async def handle_buttons(message: types.Message):
             )
             return
 
-        # ===== آپلود جزوه/ویدیو =====
+        # آپلود جزوه/ویدیو
         if state.get("mode") == "admin_upload":
             state["grade"] = grade
             state["major"] = major
@@ -169,7 +169,7 @@ async def handle_buttons(message: types.Message):
             await message.answer("🏛 موسسه را انتخاب کن", reply_markup=institute_keyboard())
             return
 
-        # ===== دانلود عادی (جزوه/ویدیو) =====
+        # دانلود عادی (جزوه/ویدیو)
         if state.get("mode") == "user_download":
             state["grade"] = grade
             state["major"] = major
