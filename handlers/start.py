@@ -1,8 +1,9 @@
 from aiogram import types
+from aiogram.types import ContentType
 from sqlalchemy import select
 
 from database.core import get_db
-from database.models import User
+from database.models import User, Archive
 
 from bot.data.teacher import teacher_keyboard
 from bot.keyboards.archive import (
@@ -60,7 +61,7 @@ async def cmd_start(message: types.Message):
 
 
 # =========================
-# HANDLER
+# HANDLE BUTTONS
 # =========================
 async def handle_buttons(message: types.Message):
 
@@ -171,7 +172,6 @@ async def handle_buttons(message: types.Message):
             state["subject"] = subject
             state["step"] = "teacher"
 
-            # استفاده از تابع teacher_keyboard
             kb = teacher_keyboard(
                 state["grade"],
                 state["major"],
@@ -187,6 +187,50 @@ async def handle_buttons(message: types.Message):
 
 
     # =====================
+    # TEACHER SELECTED
+    # =====================
+    elif user_id in upload_state:
+
+        state = upload_state[user_id]
+
+        if state.get("step") == "teacher":
+
+            # دبیر انتخاب شده
+            teacher = text
+            state["teacher"] = teacher
+            state["step"] = "waiting_for_file"
+
+            # کیبورد با دکمه لغو
+            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            kb.add("❌ لغو")
+
+            await message.answer(
+                f"✅ دبیر {teacher} انتخاب شد.\n\n"
+                f"📤 حالا فایل رو ارسال کن (PDF یا ویدیو)",
+                reply_markup=kb
+            )
+            return
+
+
+    # =====================
+    # CANCEL
+    # =====================
+    elif text == "❌ لغو":
+
+        if user_id in upload_state:
+            del upload_state[user_id]
+
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add("📚 جزوه", "🎥 ویدئو")
+
+        await message.answer(
+            "❌ آپلود لغو شد",
+            reply_markup=kb
+        )
+        return
+
+
+    # =====================
     # USER MODE
     # =====================
     elif text in ["📚 جزوه", "🎥 ویدئو"]:
@@ -196,3 +240,68 @@ async def handle_buttons(message: types.Message):
             reply_markup=grade_keyboard()
         )
         return
+
+
+# =========================
+# HANDLE FILE UPLOAD
+# =========================
+async def handle_file(message: types.Message):
+
+    user_id = message.from_user.id
+
+    # بررسی اینکه کاربر در حالت آپلود هست یا نه
+    if user_id not in upload_state:
+        await message.answer("❌ ابتدا از پنل ادمین آپلود رو شروع کن")
+        return
+
+    state = upload_state[user_id]
+
+    if state.get("step") != "waiting_for_file":
+        await message.answer("❌ لطفاً اول دبیر رو انتخاب کن")
+        return
+
+    # دریافت فایل
+    if message.document:
+        file_id = message.document.file_id
+        file_name = message.document.file_name or "unknown.pdf"
+        file_type = "pdf"
+    elif message.video:
+        file_id = message.video.file_id
+        file_name = f"video_{message.video.file_id[:8]}.mp4"
+        file_type = "video"
+    else:
+        await message.answer("❌ لطفاً فقط فایل PDF یا ویدیو ارسال کن")
+        return
+
+    # ذخیره در دیتابیس
+    async for db in get_db():
+
+        archive = Archive(
+            grade=state["grade"],
+            major=state["major"],
+            institute=state["institute"],
+            subject=state["subject"],
+            teacher=state["teacher"],
+            file_id=file_id,
+            file_name=file_name,
+            file_type=file_type,
+            uploaded_by=user_id
+        )
+
+        db.add(archive)
+        await db.commit()
+
+    # پاک کردن حالت آپلود
+    del upload_state[user_id]
+
+    # برگشت به منوی اصلی
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add("📚 جزوه", "🎥 ویدئو")
+
+    if str(user_id) == str(ADMIN_ID):
+        kb.add("👑 پنل ادمین")
+
+    await message.answer(
+        f"✅ فایل {file_name} با موفقیت ثبت شد!",
+        reply_markup=kb
+            )
