@@ -1,16 +1,15 @@
 from aiogram import types
-from aiogram.types import ContentType
 from sqlalchemy import select
 
 from database.core import get_db
 from database.models import User, Archive
 
-from bot.data.teacher import teacher_keyboard
 from bot.keyboards.archive import (
     grade_keyboard,
     major_keyboard,
     institute_keyboard,
     subject_keyboard,
+    teacher_keyboard
 )
 
 from handlers.state import upload_state
@@ -223,6 +222,9 @@ async def handle_buttons(message: types.Message):
         kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
         kb.add("📚 جزوه", "🎥 ویدئو")
 
+        if str(user_id) == str(ADMIN_ID):
+            kb.add("👑 پنل ادمین")
+
         await message.answer(
             "❌ آپلود لغو شد",
             reply_markup=kb
@@ -277,6 +279,7 @@ async def handle_file(message: types.Message):
     async for db in get_db():
 
         archive = Archive(
+            type=file_type,  # اینجا type رو پر میکنیم
             grade=state["grade"],
             major=state["major"],
             institute=state["institute"],
@@ -284,7 +287,6 @@ async def handle_file(message: types.Message):
             teacher=state["teacher"],
             file_id=file_id,
             file_name=file_name,
-            file_type=file_type,
             uploaded_by=user_id
         )
 
@@ -304,4 +306,4 @@ async def handle_file(message: types.Message):
     await message.answer(
         f"✅ فایل {file_name} با موفقیت ثبت شد!",
         reply_markup=kb
-            )
+    )
