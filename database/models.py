@@ -44,7 +44,6 @@ class Archive(Base):
     type = Column(
         String
     )
-    # pdf / video
 
     grade = Column(
         String
