@@ -147,4 +147,20 @@ def subject_keyboard(grade, major):
             KeyboardButton(subject)
         )
 
+    def institute_keyboard():
+
+    kb = ReplyKeyboardMarkup(
+        resize_keyboard=True
+    )
+
+    kb.row(
+        KeyboardButton("ماز"),
+        KeyboardButton("آلفا اسکول")
+    )
+
+    kb.row(
+        KeyboardButton("تایتان"),
+        KeyboardButton("کلاسینو")
+    )
+
     return kb
