@@ -4,13 +4,12 @@ from sqlalchemy import select
 from database.core import get_db
 from database.models import User
 
-from bot.data.teachers import TEACHERS
+from bot.data.teacher import teacher_keyboard
 from bot.keyboards.archive import (
     grade_keyboard,
     major_keyboard,
     institute_keyboard,
     subject_keyboard,
-    teacher_keyboard
 )
 
 from handlers.state import upload_state
@@ -172,28 +171,13 @@ async def handle_buttons(message: types.Message):
             state["subject"] = subject
             state["step"] = "teacher"
 
-            teachers = TEACHERS.get(
-                state["institute"],
-                {}
-            ).get(
+            # استفاده از تابع teacher_keyboard
+            kb = teacher_keyboard(
                 state["grade"],
-                {}
-            ).get(
                 state["major"],
-                {}
-            ).get(
-                subject,
-                []
+                state["institute"],
+                subject
             )
-
-            if not teachers:
-                await message.answer("❌ دبیر پیدا نشد")
-                return
-
-            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-
-            for t in teachers:
-                kb.add(t)
 
             await message.answer(
                 "👨‍🏫 دبیر را انتخاب کن",
