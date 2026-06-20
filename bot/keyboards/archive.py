@@ -1,203 +1,110 @@
-from aiogram import types
-from sqlalchemy import select
-
-from database.core import get_db
-from database.models import User
-
-from bot.keyboards.archive import (
-    grade_keyboard,
-    major_keyboard,
-    institute_keyboard,
-    subject_keyboard,
-    teacher_keyboard
-)
-
-from handlers.state import upload_state
-
-
-ADMIN_ID = 7336595194
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 
 # =========================
-# START
+# پایه
 # =========================
-async def cmd_start(message: types.Message):
+def grade_keyboard():
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
 
-    user = message.from_user
-
-    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-
-    kb.add(
-        "📚 جزوه",
-        "🎥 ویدئو"
+    kb.row(
+        KeyboardButton("دهم"),
+        KeyboardButton("یازدهم")
     )
 
-    if str(user.id) == str(ADMIN_ID):
-        kb.add("👑 پنل ادمین")
+    kb.add(KeyboardButton("دوازدهم"))
 
-    await message.answer(
-        "🎓 خوش اومدی به ربات",
-        reply_markup=kb
-    )
-
-    async for db in get_db():
-
-        result = await db.execute(
-            select(User).where(User.telegram_id == user.id)
-        )
-
-        if not result.scalar_one_or_none():
-
-            db.add(
-                User(
-                    telegram_id=user.id,
-                    username=user.username,
-                    full_name=user.full_name
-                )
-            )
-
-            await db.commit()
+    return kb
 
 
 # =========================
-# HANDLER
+# رشته
 # =========================
-async def handle_buttons(message: types.Message):
+def major_keyboard(grade):
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
 
-    text = message.text
-    user_id = message.from_user.id
+    kb.add(KeyboardButton(f"رشته:{grade}|ریاضی"))
+    kb.add(KeyboardButton(f"رشته:{grade}|تجربی"))
+    kb.add(KeyboardButton(f"رشته:{grade}|انسانی"))
 
-
-    # =========================
-    # ADMIN PANEL
-    # =========================
-    if text == "👑 پنل ادمین":
-
-        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-
-        kb.add("📤 آپلود جزوه")
-        kb.add("🎥 آپلود ویدئو")
-
-        await message.answer(
-            "👑 پنل مدیریت",
-            reply_markup=kb
-        )
-
-        return
+    return kb
 
 
-    # =========================
-    # START UPLOAD
-    # =========================
-    elif text in ["📤 آپلود جزوه", "🎥 آپلود ویدئو"]:
+# =========================
+# موسسه
+# =========================
+def institute_keyboard():
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
 
-        upload_state[user_id] = {
-            "mode": "admin_upload",
-            "type": "pdf" if text == "📤 آپلود جزوه" else "video",
-            "step": "grade"
+    kb.add("ماز")
+    kb.add("آلفا اسکول")
+    kb.add("تایتان")
+    kb.add("کلاسینو")
+
+    return kb
+
+
+# =========================
+# درس‌ها
+# =========================
+subjects = {
+    "ریاضی": ["فیزیک", "شیمی", "ریاضی", "هندسه", "فارسی", "عربی"],
+    "تجربی": ["زیست", "شیمی", "فیزیک", "ریاضی", "فارسی", "عربی"],
+    "انسانی": ["علوم و فنون", "ریاضی و آمار", "جامعه شناسی", "منطق", "اقتصاد", "فارسی"]
+}
+
+
+def subject_keyboard(grade, major):
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+
+    for s in subjects.get(major, []):
+        kb.add(KeyboardButton(s))
+
+    return kb
+
+
+# =========================
+# دبیر
+# =========================
+def teacher_keyboard(grade, major, institute, subject):
+
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+
+    data = {
+        "ماز": {
+            ("ریاضی", "فیزیک"): ["شجاعی"],
+            ("ریاضی", "شیمی"): ["فرشاد هادیان فرد", "مومن زاده"],
+            ("تجربی", "زیست"): ["پوریا خیراندیش", "امید غلامی"],
+        },
+        "کلاسینو": {
+            "فیزیک": ["نوکنده", "براتی"],
+            "شیمی": ["مرادی"],
+            "زیست": ["حنیف", "فرهمند"]
+        },
+        "آلفا اسکول": {
+            "فیزیک": ["میری"],
+            "شیمی": ["طهرانچی"],
+            "ریاضی": ["کرمی"]
+        },
+        "تایتان": {
+            "شیمی": ["فراهانی"]
         }
+    }
 
-        await message.answer(
-            "📘 پایه را انتخاب کن",
-            reply_markup=grade_keyboard()
-        )
+    teachers = []
 
-        return
+    inst_data = data.get(institute, {})
 
+    if isinstance(inst_data, dict):
 
-    # =========================
-    # GRADE
-    # =========================
-    elif text in ["دهم", "یازدهم", "دوازدهم"]:
+        if institute == "ماز":
+            teachers = inst_data.get((major, subject), [])
 
-        if user_id in upload_state:
-            upload_state[user_id]["grade"] = text
-            upload_state[user_id]["step"] = "major"
+        else:
+            teachers = inst_data.get(subject, [])
 
-        await message.answer(
-            "📗 رشته را انتخاب کن",
-            reply_markup=major_keyboard(text)
-        )
+    for t in teachers:
+        kb.add(KeyboardButton(t))
 
-        return
-
-
-    # =========================
-    # MAJOR
-    # =========================
-    elif text.startswith("رشته:"):
-
-        grade, major = text.replace("رشته:", "").split("|")
-
-        if user_id in upload_state:
-            upload_state[user_id]["grade"] = grade
-            upload_state[user_id]["major"] = major
-            upload_state[user_id]["step"] = "institute"
-
-        await message.answer(
-            "🏛 موسسه را انتخاب کن",
-            reply_markup=institute_keyboard()
-        )
-
-        return
-
-
-    # =========================
-    # INSTITUTE
-    # =========================
-    elif text in ["ماز", "آلفا اسکول", "تایتان", "کلاسینو"]:
-
-        state = upload_state[user_id]
-
-        state["institute"] = text
-        state["step"] = "subject"
-
-        await message.answer(
-            "📚 درس را انتخاب کن",
-            reply_markup=subject_keyboard(
-                state["grade"],
-                state["major"]
-            )
-        )
-
-        return
-
-
-    # =========================
-    # SUBJECT → TEACHER
-    # =========================
-    elif user_id in upload_state:
-
-        state = upload_state[user_id]
-
-        if state.get("step") == "subject":
-
-            state["subject"] = text
-            state["step"] = "teacher"
-
-            kb = teacher_keyboard(
-                state["grade"],
-                state["major"],
-                state["institute"],
-                state["subject"]
-            )
-
-            await message.answer(
-                "👨‍🏫 دبیر را انتخاب کن",
-                reply_markup=kb
-            )
-
-            return
-
-
-    # =========================
-    # USER MODE
-    # =========================
-    elif text in ["📚 جزوه", "🎥 ویدئو"]:
-
-        await message.answer(
-            "📘 پایه را انتخاب کن",
-            reply_markup=grade_keyboard()
-        )
-
-        return
+    return kb
+            
