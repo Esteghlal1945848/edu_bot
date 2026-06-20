@@ -86,7 +86,7 @@ async def handle_buttons(message: types.Message):
 
 
     # =====================
-    # START UPLOAD
+    # START UPLOAD (فقط ادمین)
     # =====================
     elif text in ["📤 آپلود جزوه", "🎥 آپلود ویدئو"]:
 
@@ -104,42 +104,62 @@ async def handle_buttons(message: types.Message):
 
 
     # =====================
-    # GRADE
+    # GRADE (برای آپلود)
     # =====================
     elif text in ["دهم", "یازدهم", "دوازدهم"]:
 
-        if user_id in upload_state:
+        # چک میکنیم کاربر در حالت آپلود هست یا دانلود
+        if user_id in upload_state and upload_state[user_id].get("mode") == "admin_upload":
             upload_state[user_id]["grade"] = text
             upload_state[user_id]["step"] = "major"
 
-        await message.answer(
-            "رشته را انتخاب کن",
-            reply_markup=major_keyboard(text)
-        )
-        return
+            await message.answer(
+                "رشته را انتخاب کن",
+                reply_markup=major_keyboard(text)
+            )
+            return
+
+        # اگر کاربر عادی باشه و برای دانلود پایه رو انتخاب کنه
+        elif text in ["دهم", "یازدهم", "دوازدهم"]:
+            # ذخیره وضعیت دانلود
+            upload_state[user_id] = {
+                "mode": "user_download",
+                "step": "institute",
+                "grade": text
+            }
+
+            await message.answer(
+                "🏛 موسسه را انتخاب کن",
+                reply_markup=institute_keyboard()
+            )
+            return
 
 
     # =====================
-    # MAJOR
+    # MAJOR (برای آپلود)
     # =====================
     elif text.startswith("رشته:"):
 
+        if user_id not in upload_state:
+            await message.answer("❌ لطفاً از ابتدا شروع کن")
+            return
+
         grade, major = text.replace("رشته:", "").split("|")
 
-        if user_id in upload_state:
+        if upload_state[user_id].get("mode") == "admin_upload":
             upload_state[user_id]["grade"] = grade
             upload_state[user_id]["major"] = major
             upload_state[user_id]["step"] = "institute"
 
-        await message.answer(
-            "🏛 موسسه را انتخاب کن",
-            reply_markup=institute_keyboard()
-        )
-        return
+            await message.answer(
+                "🏛 موسسه را انتخاب کن",
+                reply_markup=institute_keyboard()
+            )
+            return
 
 
     # =====================
-    # INSTITUTE
+    # INSTITUTE (هم برای آپلود و هم دانلود)
     # =====================
     elif text in ["ماز", "آلفا اسکول", "تایتان", "کلاسینو"]:
 
@@ -149,21 +169,37 @@ async def handle_buttons(message: types.Message):
 
         state = upload_state[user_id]
 
-        state["institute"] = text
-        state["step"] = "subject"
+        # اگر کاربر برای دانلود انتخاب کرده
+        if state.get("mode") == "user_download":
+            state["institute"] = text
+            state["step"] = "subject"
 
-        await message.answer(
-            "📚 درس را انتخاب کن",
-            reply_markup=subject_keyboard(
-                state["grade"],
-                state["major"]
+            await message.answer(
+                "📚 درس را انتخاب کن",
+                reply_markup=subject_keyboard(
+                    state["grade"],
+                    "ریاضی"  # موقتی، بعداً اصلاح میشه
+                )
             )
-        )
-        return
+            return
+
+        # اگر کاربر برای آپلود انتخاب کرده
+        elif state.get("mode") == "admin_upload":
+            state["institute"] = text
+            state["step"] = "subject"
+
+            await message.answer(
+                "📚 درس را انتخاب کن",
+                reply_markup=subject_keyboard(
+                    state["grade"],
+                    state["major"]
+                )
+            )
+            return
 
 
     # =====================
-    # SUBJECT (وقتی کاربر در مرحله انتخاب درس هست)
+    # SUBJECT (هم برای آپلود و هم دانلود)
     # =====================
     elif user_id in upload_state and upload_state[user_id].get("step") == "subject":
 
@@ -172,22 +208,30 @@ async def handle_buttons(message: types.Message):
         state["subject"] = subject
         state["step"] = "teacher"
 
-        kb = teacher_keyboard(
-            state["grade"],
-            state["major"],
-            state["institute"],
-            subject
-        )
+        # اگر کاربر برای دانلود هست، نیازی به انتخاب دبیر نداره
+        if state.get("mode") == "user_download":
+            # نمایش لیست دبیرها و فایل‌ها
+            await show_archives(message, state)
+            return
 
-        await message.answer(
-            "👨‍🏫 دبیر را انتخاب کن",
-            reply_markup=kb
-        )
-        return
+        # اگر کاربر برای آپلود هست
+        elif state.get("mode") == "admin_upload":
+            kb = teacher_keyboard(
+                state["grade"],
+                state["major"],
+                state["institute"],
+                subject
+            )
+
+            await message.answer(
+                "👨‍🏫 دبیر را انتخاب کن",
+                reply_markup=kb
+            )
+            return
 
 
     # =====================
-    # TEACHER SELECTED (وقتی کاربر در مرحله انتخاب دبیر هست)
+    # TEACHER SELECTED (فقط برای آپلود)
     # =====================
     elif user_id in upload_state and upload_state[user_id].get("step") == "teacher":
 
@@ -196,7 +240,6 @@ async def handle_buttons(message: types.Message):
         state["teacher"] = teacher
         state["step"] = "waiting_for_file"
 
-        # کیبورد با دکمه لغو
         kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
         kb.add("❌ لغو")
 
@@ -234,6 +277,13 @@ async def handle_buttons(message: types.Message):
     # =====================
     elif text in ["📚 جزوه", "🎥 ویدئو"]:
 
+        # شروع فرآیند دانلود
+        upload_state[user_id] = {
+            "mode": "user_download",
+            "step": "grade",
+            "type": "pdf" if text == "📚 جزوه" else "video"
+        }
+
         await message.answer(
             "کدوم پایه؟",
             reply_markup=grade_keyboard()
@@ -242,7 +292,71 @@ async def handle_buttons(message: types.Message):
 
 
 # =========================
-# HANDLE FILE UPLOAD
+# نمایش فایل‌ها
+# =========================
+async def show_archives(message: types.Message, state: dict):
+
+    user_id = message.from_user.id
+
+    # گرفتن فایل‌ها از دیتابیس
+    async for db in get_db():
+
+        result = await db.execute(
+            select(Archive).where(
+                Archive.grade == state["grade"],
+                Archive.institute == state["institute"],
+                Archive.subject == state["subject"],
+                Archive.type == state.get("type", "pdf")
+            )
+        )
+
+        archives = result.scalars().all()
+
+    if not archives:
+        await message.answer("❌ هیچ فایلی برای این انتخاب‌ها پیدا نشد")
+        # برگشت به منوی اصلی
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add("📚 جزوه", "🎥 ویدئو")
+        if str(user_id) == str(ADMIN_ID):
+            kb.add("👑 پنل ادمین")
+        await message.answer("به منوی اصلی برگشتی", reply_markup=kb)
+        if user_id in upload_state:
+            del upload_state[user_id]
+        return
+
+    # ارسال فایل‌ها
+    for archive in archives:
+        if archive.type == "pdf":
+            await message.answer_document(
+                archive.file_id,
+                caption=f"📄 {archive.file_name}\n"
+                        f"👨‍🏫 دبیر: {archive.teacher}"
+            )
+        else:  # video
+            await message.answer_video(
+                archive.file_id,
+                caption=f"🎥 {archive.file_name}\n"
+                        f"👨‍🏫 دبیر: {archive.teacher}"
+            )
+
+    # پاک کردن وضعیت دانلود
+    if user_id in upload_state:
+        del upload_state[user_id]
+
+    # برگشت به منوی اصلی
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add("📚 جزوه", "🎥 ویدئو")
+    if str(user_id) == str(ADMIN_ID):
+        kb.add("👑 پنل ادمین")
+
+    await message.answer(
+        "✅ همه فایل‌ها ارسال شد",
+        reply_markup=kb
+    )
+
+
+# =========================
+# HANDLE FILE UPLOAD (فقط ادمین)
 # =========================
 async def handle_file(message: types.Message):
 
@@ -254,6 +368,10 @@ async def handle_file(message: types.Message):
         return
 
     state = upload_state[user_id]
+
+    if state.get("mode") != "admin_upload":
+        await message.answer("❌ شما در حالت دانلود هستید")
+        return
 
     if state.get("step") != "waiting_for_file":
         await message.answer("❌ لطفاً اول دبیر رو انتخاب کن")
