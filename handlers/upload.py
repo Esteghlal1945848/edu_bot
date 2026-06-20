@@ -5,110 +5,116 @@ from database.models import Archive
 
 from handlers.state import upload_state
 
+=========================
 
-# =========================
-# دریافت فایل
-# =========================
+FILE
+
+=========================
+
 async def handle_file(message: types.Message):
 
-    user_id = message.from_user.id
+user_id = message.from_user.id  
 
-    state = upload_state.get(user_id)
+state = upload_state.get(user_id)  
 
-    if not state:
-        return
+if not state:  
+    return  
 
-    if state.get("mode") != "admin_upload":
-        return
+if state.get("mode") != "admin_upload":  
+    return  
 
-    file_id = None
-    file_type = None
+file_id = None  
+file_type = None  
 
-    if message.document:
+if message.document:  
 
-        file_id = message.document.file_id
-        file_type = "pdf"
+    file_id = message.document.file_id  
+    file_type = "pdf"  
 
-    elif message.video:
+elif message.video:  
 
-        file_id = message.video.file_id
-        file_type = "video"
+    file_id = message.video.file_id  
+    file_type = "video"  
 
-    if not file_id:
+if not file_id:  
 
-        await message.answer(
-            "❌ فقط PDF یا ویدیو بفرست"
-        )
+    await message.answer(  
+        "❌ فقط PDF یا MP4 بفرست"  
+    )  
 
-        return
+    return  
 
-    upload_state[user_id]["file_id"] = file_id
-    upload_state[user_id]["type"] = file_type
-    upload_state[user_id]["step"] = "caption"
+upload_state[user_id].update({  
 
-    await message.answer(
-        "✍️ توضیحات را ارسال کن"
-    )
+    "file_id": file_id,  
 
+    "type": file_type,  
 
-# =========================
-# دریافت توضیحات و ذخیره
-# =========================
+    "step": "caption"  
+
+})  
+
+await message.answer(  
+    "✍️ حالا توضیحات رو بنویس"  
+)
+
+=========================
+
+CAPTION
+
+=========================
+
 async def handle_caption(message: types.Message):
 
-    user_id = message.from_user.id
+user_id = message.from_user.id  
 
-    state = upload_state.get(user_id)
+state = upload_state.get(user_id)  
 
-    if not state:
+if not state:  
+    return  
 
-        await message.answer(
-            "❌ آپلود منقضی شد"
-        )
+if state.get("step") != "caption":  
+    return  
 
-        return
+try:  
 
-    if state.get("step") != "caption":
-        return
+    async for db in get_db():  
 
-    try:
+        db.add(  
 
-        async for db in get_db():
+            Archive(  
 
-            archive = Archive(
+                type=state["type"],  
 
-                type=state["type"],
+                grade=state["grade"],  
 
-                grade=state["grade"],
+                major=state["major"],  
 
-                major=state["major"],
+                subject=state["subject"],  
 
-                subject=state["subject"],
+                file_id=state["file_id"],  
 
-                file_id=state["file_id"],
+                caption=message.text,  
 
-                caption=message.text or "",
+                uploaded_by=user_id  
 
-                uploaded_by=user_id
-            )
+            )  
 
-            db.add(archive)
+        )  
 
-            await db.commit()
+        await db.commit()  
 
-        upload_state.pop(
-            user_id,
-            None
-        )
+    upload_state.pop(  
+        user_id,  
+        None  
+    )  
 
-        await message.answer(
-            "✅ فایل با موفقیت ثبت شد"
-        )
+    await message.answer(  
+        "✅ فایل با موفقیت ذخیره شد"  
+    )  
 
-    except Exception as e:
+except Exception as e:  
 
-        print("UPLOAD ERROR:", e)
-
-        await message.answer(
-            f"❌ خطا:\n{str(e)}"
-        )
+    await message.answer(  
+        f"❌ خطا:\n{e}"  
+    )
