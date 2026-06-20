@@ -2,8 +2,10 @@ from sqlalchemy import (
     Column,
     Integer,
     String,
-    BigInteger
+    BigInteger,
+    DateTime
 )
+from datetime import datetime
 
 from database.core import Base
 
@@ -42,7 +44,7 @@ class Archive(Base):
     )
 
     type = Column(
-        String
+        String  # pdf یا video
     )
 
     grade = Column(
@@ -69,6 +71,11 @@ class Archive(Base):
         String
     )
 
+    file_name = Column(
+        String,
+        nullable=True
+    )
+
     caption = Column(
         String,
         nullable=True
@@ -76,4 +83,9 @@ class Archive(Base):
 
     uploaded_by = Column(
         BigInteger
+    )
+
+    created_at = Column(
+        DateTime,
+        default=datetime.now
     )
