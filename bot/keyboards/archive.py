@@ -129,7 +129,6 @@ def book_subject_keyboard(publisher, grade, major):
 def book_publisher_keyboard(grade, major):
     """کیبورد ناشران بر اساس پایه و رشته"""
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    # ناشران اصلی
     kb.add("نشر الگو")
     kb.add("خیلی سبز")
     kb.add("نردبام")
