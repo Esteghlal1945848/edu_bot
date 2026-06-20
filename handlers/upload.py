@@ -6,10 +6,13 @@ from database.models import Archive
 from handlers.state import upload_state
 
 
-# ========= FILE =========
+# =========================
+# دریافت فایل
+# =========================
 async def handle_file(message: types.Message):
 
     user_id = message.from_user.id
+
     state = upload_state.get(user_id)
 
     if not state:
@@ -22,15 +25,21 @@ async def handle_file(message: types.Message):
     file_type = None
 
     if message.document:
+
         file_id = message.document.file_id
         file_type = "pdf"
 
     elif message.video:
+
         file_id = message.video.file_id
         file_type = "video"
 
     if not file_id:
-        await message.answer("❌ فقط PDF یا MP4 بفرست")
+
+        await message.answer(
+            "❌ فقط PDF یا ویدیو بفرست"
+        )
+
         return
 
     upload_state[user_id]["file_id"] = file_id
@@ -42,13 +51,21 @@ async def handle_file(message: types.Message):
     )
 
 
-# ========= CAPTION =========
+# =========================
+# دریافت توضیحات و ذخیره
+# =========================
 async def handle_caption(message: types.Message):
 
     user_id = message.from_user.id
+
     state = upload_state.get(user_id)
 
     if not state:
+
+        await message.answer(
+            "❌ آپلود منقضی شد"
+        )
+
         return
 
     if state.get("step") != "caption":
@@ -59,25 +76,33 @@ async def handle_caption(message: types.Message):
         async for db in get_db():
 
             archive = Archive(
+
                 type=state["type"],
+
                 grade=state["grade"],
+
                 major=state["major"],
+
                 subject=state["subject"],
+
                 file_id=state["file_id"],
-                caption=message.text,
-                uploaded_by=int(user_id)
+
+                caption=message.text or "",
+
+                uploaded_by=user_id
             )
 
             db.add(archive)
 
             await db.commit()
 
-            await db.refresh(archive)
-
-        upload_state.pop(user_id, None)
+        upload_state.pop(
+            user_id,
+            None
+        )
 
         await message.answer(
-            "✅ ثبت شد و داخل دیتابیس ذخیره شد"
+            "✅ فایل با موفقیت ثبت شد"
         )
 
     except Exception as e:
@@ -85,5 +110,5 @@ async def handle_caption(message: types.Message):
         print("UPLOAD ERROR:", e)
 
         await message.answer(
-            f"❌ ذخیره نشد:\n{str(e)}"
+            f"❌ خطا:\n{str(e)}"
         )
