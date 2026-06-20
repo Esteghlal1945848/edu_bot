@@ -1,5 +1,5 @@
 from aiogram import types
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from database.core import get_db
 from database.models import User, Archive
@@ -77,11 +77,51 @@ async def handle_buttons(message: types.Message):
 
         kb.add("📤 آپلود جزوه")
         kb.add("🎥 آپلود ویدئو")
+        kb.add("📋 لیست فایل‌ها")
+        kb.add("🗑 حذف فایل")
+        kb.add("📊 آمار")
 
         await message.answer(
-            "پنل مدیریت",
+            "👑 پنل مدیریت",
             reply_markup=kb
         )
+        return
+
+
+    # =====================
+    # LIST FILES (لیست فایل‌ها)
+    # =====================
+    elif text == "📋 لیست فایل‌ها":
+
+        await list_files(message)
+        return
+
+
+    # =====================
+    # DELETE FILE (حذف فایل)
+    # =====================
+    elif text == "🗑 حذف فایل":
+
+        # ذخیره وضعیت حذف
+        upload_state[user_id] = {
+            "mode": "admin_delete",
+            "step": "waiting_for_file_id"
+        }
+
+        await message.answer(
+            "🗑 آیدی فایل مورد نظر برای حذف رو وارد کن:\n\n"
+            "مثلاً: `file_123456789`",
+            parse_mode="Markdown"
+        )
+        return
+
+
+    # =====================
+    # STATS (آمار)
+    # =====================
+    elif text == "📊 آمار":
+
+        await show_stats(message)
         return
 
 
@@ -132,6 +172,17 @@ async def handle_buttons(message: types.Message):
                 "رشته را انتخاب کن",
                 reply_markup=major_keyboard(text)
             )
+            return
+
+
+    # =====================
+    # DELETE FILE - دریافت آیدی فایل
+    # =====================
+    elif user_id in upload_state and upload_state[user_id].get("mode") == "admin_delete":
+        
+        if upload_state[user_id].get("step") == "waiting_for_file_id":
+            file_id = text.strip()
+            await delete_file(message, file_id)
             return
 
 
@@ -291,7 +342,191 @@ async def handle_buttons(message: types.Message):
 
 
 # =========================
-# نمایش فایل‌ها
+# LIST FILES (لیست فایل‌ها)
+# =========================
+async def list_files(message: types.Message):
+
+    user_id = message.from_user.id
+
+    async for db in get_db():
+
+        result = await db.execute(
+            select(Archive).order_by(Archive.id.desc()).limit(20)
+        )
+        files = result.scalars().all()
+
+    if not files:
+        await message.answer("❌ هیچ فایلی در دیتابیس وجود ندارد")
+        return
+
+    # ارسال لیست فایل‌ها به صورت تکی
+    for file in files:
+        await message.answer(
+            f"📄 **{file.file_name}**\n\n"
+            f"🆔 آیدی فایل: `{file.file_id[:20]}...`\n"
+            f"📚 پایه: {file.grade}\n"
+            f"🎓 رشته: {file.major}\n"
+            f"🏛 موسسه: {file.institute}\n"
+            f"📖 درس: {file.subject}\n"
+            f"👨‍🏫 دبیر: {file.teacher}\n"
+            f"📁 نوع: {'PDF' if file.type == 'pdf' else 'ویدیو'}\n"
+            f"👤 آپلود کننده: {file.uploaded_by}",
+            parse_mode="Markdown"
+        )
+
+    await message.answer(
+        f"✅ {len(files)} فایل آخر نمایش داده شد"
+    )
+
+
+# =========================
+# DELETE FILE (حذف فایل)
+# =========================
+async def delete_file(message: types.Message, file_id: str):
+
+    user_id = message.from_user.id
+
+    # جستجوی فایل با آیدی کامل یا بخشی از آن
+    async for db in get_db():
+
+        # اگر آیدی کامل وارد شده
+        result = await db.execute(
+            select(Archive).where(Archive.file_id == file_id)
+        )
+        file = result.scalar_one_or_none()
+
+        # اگر با آیدی کامل پیدا نشد، با بخشی از آیدی جستجو کن
+        if not file:
+            result = await db.execute(
+                select(Archive).where(Archive.file_id.like(f"%{file_id}%"))
+            )
+            file = result.scalar_one_or_none()
+
+        if file:
+            # حذف فایل
+            await db.delete(file)
+            await db.commit()
+
+            await message.answer(
+                f"✅ فایل با موفقیت حذف شد:\n\n"
+                f"📄 {file.file_name}\n"
+                f"👨‍🏫 دبیر: {file.teacher}\n"
+                f"📖 درس: {file.subject}"
+            )
+        else:
+            await message.answer(
+                f"❌ فایلی با آیدی `{file_id}` پیدا نشد\n\n"
+                "لطفاً آیدی صحیح رو وارد کن"
+            )
+
+    # پاک کردن حالت
+    if user_id in upload_state:
+        del upload_state[user_id]
+
+    # برگشت به پنل ادمین
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add("📤 آپلود جزوه")
+    kb.add("🎥 آپلود ویدئو")
+    kb.add("📋 لیست فایل‌ها")
+    kb.add("🗑 حذف فایل")
+    kb.add("📊 آمار")
+
+    await message.answer(
+        "👑 پنل مدیریت",
+        reply_markup=kb
+    )
+
+
+# =========================
+# SHOW STATS (آمار)
+# =========================
+async def show_stats(message: types.Message):
+
+    user_id = message.from_user.id
+
+    async for db in get_db():
+
+        # تعداد کل کاربران
+        users_count = await db.scalar(
+            select(func.count()).select_from(User)
+        )
+
+        # تعداد کل فایل‌ها
+        files_count = await db.scalar(
+            select(func.count()).select_from(Archive)
+        )
+
+        # تعداد فایل‌های PDF
+        pdf_count = await db.scalar(
+            select(func.count()).select_from(Archive).where(Archive.type == "pdf")
+        )
+
+        # تعداد فایل‌های ویدیو
+        video_count = await db.scalar(
+            select(func.count()).select_from(Archive).where(Archive.type == "video")
+        )
+
+        # تعداد فایل‌های هر موسسه
+        maz_count = await db.scalar(
+            select(func.count()).select_from(Archive).where(Archive.institute == "ماز")
+        )
+        alpha_count = await db.scalar(
+            select(func.count()).select_from(Archive).where(Archive.institute == "آلفا اسکول")
+        )
+        titan_count = await db.scalar(
+            select(func.count()).select_from(Archive).where(Archive.institute == "تایتان")
+        )
+        classino_count = await db.scalar(
+            select(func.count()).select_from(Archive).where(Archive.institute == "کلاسینو")
+        )
+
+        # تعداد فایل‌های هر پایه
+        tenth_count = await db.scalar(
+            select(func.count()).select_from(Archive).where(Archive.grade == "دهم")
+        )
+        eleventh_count = await db.scalar(
+            select(func.count()).select_from(Archive).where(Archive.grade == "یازدهم")
+        )
+        twelfth_count = await db.scalar(
+            select(func.count()).select_from(Archive).where(Archive.grade == "دوازدهم")
+        )
+
+    # ارسال آمار
+    await message.answer(
+        f"📊 **آمار ربات**\n\n"
+        f"👥 **کاربران:** {users_count}\n"
+        f"📄 **کل فایل‌ها:** {files_count}\n\n"
+        f"📁 **نوع فایل:**\n"
+        f"   📄 PDF: {pdf_count}\n"
+        f"   🎥 ویدیو: {video_count}\n\n"
+        f"🏛 **موسسه:**\n"
+        f"   ماز: {maz_count}\n"
+        f"   آلفا اسکول: {alpha_count}\n"
+        f"   تایتان: {titan_count}\n"
+        f"   کلاسینو: {classino_count}\n\n"
+        f"📚 **پایه:**\n"
+        f"   دهم: {tenth_count}\n"
+        f"   یازدهم: {eleventh_count}\n"
+        f"   دوازدهم: {twelfth_count}",
+        parse_mode="Markdown"
+    )
+
+    # برگشت به پنل ادمین
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add("📤 آپلود جزوه")
+    kb.add("🎥 آپلود ویدئو")
+    kb.add("📋 لیست فایل‌ها")
+    kb.add("🗑 حذف فایل")
+    kb.add("📊 آمار")
+
+    await message.answer(
+        "👑 پنل مدیریت",
+        reply_markup=kb
+    )
+
+
+# =========================
+# نمایش فایل‌ها (برای کاربر عادی)
 # =========================
 async def show_archives(message: types.Message, state: dict):
 
@@ -426,4 +661,4 @@ async def handle_file(message: types.Message):
     await message.answer(
         f"✅ فایل {file_name} با موفقیت ثبت شد!",
         reply_markup=kb
-    )
+        )
