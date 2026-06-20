@@ -85,9 +85,16 @@ async def handle_buttons(message: types.Message):
         await message.answer("پایه را انتخاب کن", reply_markup=grade_keyboard())
         return
 
+    # ===================== دانلود کتاب =====================
+    if text == "📖 کتاب کمک آموزشی":
+        upload_state[user_id] = {"mode": "user_download", "step": "book_grade", "category": "book"}
+        await message.answer("📖 کدوم پایه؟", reply_markup=grade_keyboard())
+        return
+
     # ===================== GRADE =====================
     if text in ["دهم", "یازدهم", "دوازدهم"]:
-        # حالت کتاب (دانلود)
+        
+        # ===== حالت کتاب (دانلود) =====
         if user_id in upload_state and upload_state[user_id].get("step") == "book_grade":
             upload_state[user_id]["grade"] = text
             upload_state[user_id]["step"] = "book_major"
@@ -97,21 +104,21 @@ async def handle_buttons(message: types.Message):
             await message.answer("📖 رشته را انتخاب کن:", reply_markup=kb)
             return
 
-        # حالت آپلود کتاب (ادمین)
+        # ===== حالت آپلود کتاب (ادمین) =====
         if user_id in upload_state and upload_state[user_id].get("mode") == "book_upload":
             upload_state[user_id]["grade"] = text
             upload_state[user_id]["step"] = "major"
             await message.answer("رشته را انتخاب کن", reply_markup=major_keyboard(text))
             return
 
-        # حالت آپلود جزوه/ویدیو
+        # ===== حالت آپلود جزوه/ویدیو =====
         if user_id in upload_state and upload_state[user_id].get("mode") == "admin_upload":
             upload_state[user_id]["grade"] = text
             upload_state[user_id]["step"] = "major"
             await message.answer("رشته را انتخاب کن", reply_markup=major_keyboard(text))
             return
 
-        # دانلود عادی
+        # ===== دانلود عادی (جزوه/ویدیو) =====
         upload_state[user_id] = {"mode": "user_download", "step": "major", "grade": text}
         await message.answer("رشته را انتخاب کن", reply_markup=major_keyboard(text))
         return
@@ -132,7 +139,7 @@ async def handle_buttons(message: types.Message):
         grade, major = text.replace("رشته:", "").split("|")
         state = upload_state[user_id]
 
-        # کتاب (دانلود)
+        # ===== کتاب (دانلود) =====
         if state.get("step") == "book_major":
             state["grade"] = grade
             state["major"] = major
@@ -143,7 +150,7 @@ async def handle_buttons(message: types.Message):
             )
             return
 
-        # آپلود کتاب (ادمین)
+        # ===== آپلود کتاب (ادمین) =====
         if state.get("mode") == "book_upload":
             state["grade"] = grade
             state["major"] = major
@@ -154,7 +161,7 @@ async def handle_buttons(message: types.Message):
             )
             return
 
-        # آپلود جزوه/ویدیو
+        # ===== آپلود جزوه/ویدیو =====
         if state.get("mode") == "admin_upload":
             state["grade"] = grade
             state["major"] = major
@@ -162,12 +169,12 @@ async def handle_buttons(message: types.Message):
             await message.answer("🏛 موسسه را انتخاب کن", reply_markup=institute_keyboard())
             return
 
-        # دانلود عادی
+        # ===== دانلود عادی (جزوه/ویدیو) =====
         if state.get("mode") == "user_download":
             state["grade"] = grade
             state["major"] = major
             state["step"] = "institute"
-            await message.answer("🏛 موسسه/ناشر را انتخاب کن", reply_markup=institute_keyboard())
+            await message.answer("🏛 موسسه را انتخاب کن", reply_markup=institute_keyboard())
             return
 
     # ===================== کتاب: انتخاب ناشر (دانلود) =====================
@@ -270,15 +277,11 @@ async def handle_buttons(message: types.Message):
         await message.answer("❌ آپلود لغو شد", reply_markup=kb)
         return
 
-    # ===================== دانلود کاربر =====================
-    if text in ["📚 جزوه", "🎥 ویدئو", "📖 کتاب کمک آموزشی"]:
-        category_map = {"📚 جزوه": "pdf", "🎥 ویدئو": "video", "📖 کتاب کمک آموزشی": "book"}
-        if text == "📖 کتاب کمک آموزشی":
-            upload_state[user_id] = {"mode": "user_download", "step": "book_grade", "category": "book"}
-            await message.answer("📖 کدوم پایه؟", reply_markup=grade_keyboard())
-        else:
-            upload_state[user_id] = {"mode": "user_download", "step": "grade", "category": category_map.get(text, "pdf")}
-            await message.answer("کدوم پایه؟", reply_markup=grade_keyboard())
+    # ===================== دانلود جزوه/ویدیو =====================
+    if text in ["📚 جزوه", "🎥 ویدئو"]:
+        category_map = {"📚 جزوه": "pdf", "🎥 ویدئو": "video"}
+        upload_state[user_id] = {"mode": "user_download", "step": "grade", "category": category_map.get(text, "pdf")}
+        await message.answer("کدوم پایه؟", reply_markup=grade_keyboard())
         return
 
     # ===================== لیست فایل‌ها =====================
