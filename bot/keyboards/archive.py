@@ -1,6 +1,9 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 
+# =========================
+# پایه
+# =========================
 def grade_keyboard():
 
     kb = ReplyKeyboardMarkup(
@@ -19,6 +22,9 @@ def grade_keyboard():
     return kb
 
 
+# =========================
+# رشته
+# =========================
 def major_keyboard(grade):
 
     kb = ReplyKeyboardMarkup(
@@ -40,6 +46,31 @@ def major_keyboard(grade):
     return kb
 
 
+# =========================
+# موسسه
+# =========================
+def institute_keyboard():
+
+    kb = ReplyKeyboardMarkup(
+        resize_keyboard=True
+    )
+
+    kb.row(
+        KeyboardButton("ماز"),
+        KeyboardButton("آلفا اسکول")
+    )
+
+    kb.row(
+        KeyboardButton("تایتان"),
+        KeyboardButton("کلاسینو")
+    )
+
+    return kb
+
+
+# =========================
+# دروس
+# =========================
 subjects = {
 
 "دهم":{
@@ -135,6 +166,9 @@ subjects = {
 }
 
 
+# =========================
+# درس
+# =========================
 def subject_keyboard(grade, major):
 
     kb = ReplyKeyboardMarkup(
@@ -146,21 +180,5 @@ def subject_keyboard(grade, major):
         kb.add(
             KeyboardButton(subject)
         )
-
-    def institute_keyboard():
-
-    kb = ReplyKeyboardMarkup(
-        resize_keyboard=True
-    )
-
-    kb.row(
-        KeyboardButton("ماز"),
-        KeyboardButton("آلفا اسکول")
-    )
-
-    kb.row(
-        KeyboardButton("تایتان"),
-        KeyboardButton("کلاسینو")
-    )
 
     return kb
