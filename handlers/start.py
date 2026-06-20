@@ -1,3 +1,4 @@
+
 from aiogram import types
 from sqlalchemy import select
 
@@ -7,6 +8,7 @@ from database.models import User
 from bot.keyboards.archive import (
     grade_keyboard,
     major_keyboard,
+    institute_keyboard,
     subject_keyboard
 )
 
@@ -16,42 +18,25 @@ from handlers.state import upload_state
 ADMIN_ID = 7336595194
 
 
-# =========================
-# START
-# =========================
 async def cmd_start(message: types.Message):
 
     user = message.from_user
 
-    keyboard = types.ReplyKeyboardMarkup(
+    kb = types.ReplyKeyboardMarkup(
         resize_keyboard=True
     )
 
-    keyboard.add(
+    kb.add(
         "📚 جزوه",
         "🎥 ویدئو"
     )
 
-    keyboard.add(
-        "👨‍🏫 دبیر",
-        "🔍 جستجو"
-    )
-
     if str(user.id) == str(ADMIN_ID):
-
-        keyboard.add(
-            "👑 پنل ادمین"
-        )
+        kb.add("👑 پنل ادمین")
 
     await message.answer(
-        f"""
-🎓 خوش آمدی {user.full_name}
-
-📚 بزرگ‌ترین آرشیو جزوه و ویدئو
-
-از منو انتخاب کن 👇
-""",
-        reply_markup=keyboard
+        "🎓 خوش اومدی",
+        reply_markup=kb
     )
 
     async for db in get_db():
@@ -62,9 +47,7 @@ async def cmd_start(message: types.Message):
             )
         )
 
-        existing = result.scalar_one_or_none()
-
-        if not existing:
+        if not result.scalar_one_or_none():
 
             db.add(
                 User(
@@ -77,44 +60,36 @@ async def cmd_start(message: types.Message):
             await db.commit()
 
 
-# =========================
-# BUTTONS
-# =========================
-async def handle_buttons(message: types.Message):
 
-    text = message.text or ""
+async def handle_buttons(
+    message: types.Message
+):
 
+    text = message.text
     user_id = message.from_user.id
 
 
-    # =====================
-    # ADMIN PANEL
-    # =====================
-
     if text == "👑 پنل ادمین":
-
-        if str(user_id) != str(ADMIN_ID):
-            return
 
         kb = types.ReplyKeyboardMarkup(
             resize_keyboard=True
         )
 
-        kb.add("📤 آپلود جزوه")
+        kb.add(
+            "📤 آپلود جزوه"
+        )
 
-        kb.add("🎥 آپلود ویدئو")
+        kb.add(
+            "🎥 آپلود ویدئو"
+        )
 
         await message.answer(
-            "👑 پنل مدیریت",
+            "پنل مدیریت",
             reply_markup=kb
         )
 
         return
 
-
-    # =====================
-    # START UPLOAD
-    # =====================
 
     elif text in [
 
@@ -125,28 +100,25 @@ async def handle_buttons(message: types.Message):
 
         upload_state[user_id] = {
 
-            "mode": "admin_upload",
+            "mode":"admin_upload",
 
-            "type": (
+            "type":(
                 "pdf"
-                if text == "📤 آپلود جزوه"
+                if text=="📤 آپلود جزوه"
                 else "video"
             ),
 
-            "step": "grade"
+            "step":"grade"
+
         }
 
         await message.answer(
-            "پایه را انتخاب کن 👇",
+            "پایه را انتخاب کن",
             reply_markup=grade_keyboard()
         )
 
         return
 
-
-    # =====================
-    # GRADE
-    # =====================
 
     elif text in [
 
@@ -158,83 +130,109 @@ async def handle_buttons(message: types.Message):
 
         if user_id in upload_state:
 
-            upload_state[user_id]["grade"] = text
+            upload_state[user_id][
+                "grade"
+            ] = text
 
-            upload_state[user_id]["step"] = "major"
+            upload_state[user_id][
+                "step"
+            ] = "major"
 
         await message.answer(
-            "رشته را انتخاب کن 👇",
-            reply_markup=major_keyboard(text)
+            "رشته را انتخاب کن",
+            reply_markup=major_keyboard(
+                text
+            )
         )
 
         return
 
 
-    # =====================
-    # MAJOR
-    # =====================
-
-    elif text.startswith("رشته:"):
+    elif text.startswith(
+        "رشته:"
+    ):
 
         grade, major = text.replace(
             "رشته:",
             ""
         ).split("|")
 
-        if user_id in upload_state:
+        upload_state[user_id][
+            "major"
+        ] = major
 
-            upload_state[user_id]["grade"] = grade
-
-            upload_state[user_id]["major"] = major
-
-            upload_state[user_id]["step"] = "subject"
+        upload_state[user_id][
+            "step"
+        ] = "institute"
 
         await message.answer(
-            "درس را انتخاب کن 👇",
-            reply_markup=subject_keyboard(
-                grade,
-                major
-            )
+            "🏛 موسسه را انتخاب کن",
+            reply_markup=institute_keyboard()
         )
 
         return
 
-
-    # =====================
-    # SUBJECT
-    # =====================
-
-    elif user_id in upload_state:
-
-        state = upload_state[user_id]
-
-        if state.get("step") == "subject":
-
-            state["subject"] = text
-
-            state["step"] = "file"
-
-            await message.answer(
-                "📎 فایل PDF یا MP4 را ارسال کن"
-            )
-
-            return
-
-
-    # =====================
-    # USER MODE
-    # =====================
 
     elif text in [
 
-        "📚 جزوه",
-        "🎥 ویدئو"
+        "ماز",
+        "آلفا اسکول",
+        "تایتان",
+        "کلاسینو"
 
     ]:
 
+        state = upload_state[
+            user_id
+        ]
+
+        state[
+            "institute"
+        ] = text
+
+        state[
+            "step"
+        ] = "subject"
+
         await message.answer(
-            "کدوم پایه؟",
-            reply_markup=grade_keyboard()
+
+            "📚 درس را انتخاب کن",
+
+            reply_markup=subject_keyboard(
+
+                state[
+                    "grade"
+                ],
+
+                state[
+                    "major"
+                ]
+
+            )
+
         )
 
         return
+
+
+    elif user_id in upload_state:
+
+        state = upload_state[
+            user_id
+        ]
+
+        if state[
+            "step"
+        ] == "subject":
+
+            state[
+                "subject"
+            ] = text
+
+            state[
+                "step"
+            ] = "file"
+
+            await message.answer(
+                "📎 فایل را ارسال کن"
+            )
