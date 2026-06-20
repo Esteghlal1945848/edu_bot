@@ -10,11 +10,8 @@ from database.core import init_db
 
 from handlers.start import (
     cmd_start,
-    handle_buttons
-)
-
-from handlers.upload import (
-    handle_file
+    handle_buttons,
+    handle_file  # از start.py import میکنیم
 )
 
 
