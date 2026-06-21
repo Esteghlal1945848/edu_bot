@@ -65,9 +65,20 @@ async def auto_save_from_channel(message: types.Message):
     subject = tags[3].replace("_", " ")
     teacher = tags[4].replace("_", " ")
 
+    # استانداردسازی نام درس‌ها
+    subject_map = {
+        "زیست": "زیست شناسی",
+        "علوم و فنون": "علوم و فنون ادبی",
+        "روانشناسی": "روان شناسی",
+        "دینی": "دین و زندگی",
+        "ادبیات": "فارسی",
+    }
+    subject = subject_map.get(subject, subject)
+
     # ========== بخش ۶: ذخیره در دیتابیس ==========
     async for db in get_db():
         archive = Archive(
+            category="pdf" if message.document else "video",
             type="pdf" if message.document else "video",
             grade=grade,
             major=major,
@@ -110,11 +121,30 @@ async def main():
     )
     dp = Dispatcher(bot, storage=storage)
 
-    # ثبت هندلرها
-    dp.register_message_handler(auto_save_from_channel, content_types=["document", "video"])
+    # =====================
+    # ثبت هندلرها (با اولویت درست)
+    # =====================
+
+    # 1️⃣ دریافت خودکار از کانال (فایل‌ها)
+    dp.register_message_handler(
+        auto_save_from_channel,
+        content_types=[types.ContentType.DOCUMENT, types.ContentType.VIDEO]
+    )
+
+    # 2️⃣ استارت
     dp.register_message_handler(cmd_start, commands=["start"])
-    dp.register_message_handler(handle_buttons)
-    dp.register_message_handler(handle_file, content_types=["document", "video"])
+
+    # 3️⃣ آپلود فایل توسط ادمین (از طریق پنل) - اولویت با فایل‌ها
+    dp.register_message_handler(
+        handle_file,
+        content_types=[types.ContentType.DOCUMENT, types.ContentType.VIDEO]
+    )
+
+    # 4️⃣ دکمه‌ها و پیام‌های متنی - فقط متن
+    dp.register_message_handler(
+        handle_buttons,
+        content_types=[types.ContentType.TEXT]
+    )
 
     await on_startup(dp)
 
