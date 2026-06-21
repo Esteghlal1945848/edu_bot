@@ -84,6 +84,9 @@ async def handle_buttons(message: types.Message):
 
     # ===================== دانلود کتاب =====================
     if text == "📖 کتاب کمک آموزشی":
+        # پاک کردن state قبلی و ساختن state جدید برای کتاب
+        if user_id in upload_state:
+            del upload_state[user_id]
         upload_state[user_id] = {"mode": "user_download", "step": "book_grade", "category": "book"}
         await message.answer("📖 کدوم پایه؟", reply_markup=grade_keyboard())
         return
@@ -116,6 +119,9 @@ async def handle_buttons(message: types.Message):
             return
 
         # 4️⃣ آخر: دانلود عادی (جزوه/ویدیو)
+        # پاک کردن state قبلی و ساختن state جدید برای دانلود عادی
+        if user_id in upload_state:
+            del upload_state[user_id]
         upload_state[user_id] = {"mode": "user_download", "step": "major", "grade": text}
         await message.answer("رشته را انتخاب کن", reply_markup=major_keyboard(text))
         return
@@ -276,6 +282,8 @@ async def handle_buttons(message: types.Message):
 
     # ===================== دانلود جزوه/ویدیو =====================
     if text in ["📚 جزوه", "🎥 ویدئو"]:
+        if user_id in upload_state:
+            del upload_state[user_id]
         category_map = {"📚 جزوه": "pdf", "🎥 ویدئو": "video"}
         upload_state[user_id] = {"mode": "user_download", "step": "grade", "category": category_map.get(text, "pdf")}
         await message.answer("کدوم پایه؟", reply_markup=grade_keyboard())
@@ -297,6 +305,7 @@ async def handle_buttons(message: types.Message):
         await show_stats(message)
         return
 
+# ===================== نمایش کتاب‌ها =====================
 async def show_book_archives(message: types.Message, state: dict):
     user_id = message.from_user.id
     async for db in get_db():
@@ -330,6 +339,7 @@ async def show_book_archives(message: types.Message, state: dict):
         kb.add("👑 پنل ادمین")
     await message.answer("✅ همه کتاب‌ها ارسال شد", reply_markup=kb)
 
+# ===================== لیست فایل‌ها =====================
 async def list_files(message: types.Message):
     async for db in get_db():
         result = await db.execute(select(Archive).order_by(Archive.id.desc()).limit(20))
@@ -352,6 +362,7 @@ async def list_files(message: types.Message):
         )
     await message.answer(f"✅ {len(files)} فایل آخر نمایش داده شد")
 
+# ===================== حذف فایل =====================
 async def delete_file(message: types.Message, file_id: str):
     user_id = message.from_user.id
     async for db in get_db():
@@ -369,6 +380,7 @@ async def delete_file(message: types.Message, file_id: str):
     kb.add("⚡ آپلود سریع", "📤 آپلود جزوه", "🎥 آپلود ویدئو", "📖 آپلود کتاب", "📋 لیست فایل‌ها", "🗑 حذف فایل", "📊 آمار")
     await message.answer("👑 پنل مدیریت", reply_markup=kb)
 
+# ===================== آمار =====================
 async def show_stats(message: types.Message):
     async for db in get_db():
         users_count = await db.scalar(select(func.count()).select_from(User))
@@ -389,6 +401,7 @@ async def show_stats(message: types.Message):
     kb.add("⚡ آپلود سریع", "📤 آپلود جزوه", "🎥 آپلود ویدئو", "📖 آپلود کتاب", "📋 لیست فایل‌ها", "🗑 حذف فایل", "📊 آمار")
     await message.answer("👑 پنل مدیریت", reply_markup=kb)
 
+# ===================== نمایش جزوه/ویدیو =====================
 async def show_archives(message: types.Message, state: dict):
     user_id = message.from_user.id
     category = state.get("category", "pdf")
@@ -432,6 +445,7 @@ async def show_archives(message: types.Message, state: dict):
         kb.add("👑 پنل ادمین")
     await message.answer("✅ همه فایل‌ها ارسال شد", reply_markup=kb)
 
+# ===================== آپلود فایل =====================
 async def handle_file(message: types.Message):
     user_id = message.from_user.id
     if user_id not in upload_state:
