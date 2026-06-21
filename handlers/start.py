@@ -1,6 +1,3 @@
-# ============================================
-# handlers/start.py
-# ============================================
 from aiogram import types
 from sqlalchemy import select, func
 from database.core import get_db
@@ -300,7 +297,6 @@ async def handle_buttons(message: types.Message):
         await show_stats(message)
         return
 
-# ===================== نمایش کتاب‌ها =====================
 async def show_book_archives(message: types.Message, state: dict):
     user_id = message.from_user.id
     async for db in get_db():
@@ -334,7 +330,6 @@ async def show_book_archives(message: types.Message, state: dict):
         kb.add("👑 پنل ادمین")
     await message.answer("✅ همه کتاب‌ها ارسال شد", reply_markup=kb)
 
-# ===================== لیست فایل‌ها =====================
 async def list_files(message: types.Message):
     async for db in get_db():
         result = await db.execute(select(Archive).order_by(Archive.id.desc()).limit(20))
@@ -357,7 +352,6 @@ async def list_files(message: types.Message):
         )
     await message.answer(f"✅ {len(files)} فایل آخر نمایش داده شد")
 
-# ===================== حذف فایل =====================
 async def delete_file(message: types.Message, file_id: str):
     user_id = message.from_user.id
     async for db in get_db():
@@ -375,7 +369,6 @@ async def delete_file(message: types.Message, file_id: str):
     kb.add("⚡ آپلود سریع", "📤 آپلود جزوه", "🎥 آپلود ویدئو", "📖 آپلود کتاب", "📋 لیست فایل‌ها", "🗑 حذف فایل", "📊 آمار")
     await message.answer("👑 پنل مدیریت", reply_markup=kb)
 
-# ===================== آمار =====================
 async def show_stats(message: types.Message):
     async for db in get_db():
         users_count = await db.scalar(select(func.count()).select_from(User))
@@ -396,7 +389,6 @@ async def show_stats(message: types.Message):
     kb.add("⚡ آپلود سریع", "📤 آپلود جزوه", "🎥 آپلود ویدئو", "📖 آپلود کتاب", "📋 لیست فایل‌ها", "🗑 حذف فایل", "📊 آمار")
     await message.answer("👑 پنل مدیریت", reply_markup=kb)
 
-# ===================== نمایش جزوه/ویدیو =====================
 async def show_archives(message: types.Message, state: dict):
     user_id = message.from_user.id
     category = state.get("category", "pdf")
@@ -440,7 +432,6 @@ async def show_archives(message: types.Message, state: dict):
         kb.add("👑 پنل ادمین")
     await message.answer("✅ همه فایل‌ها ارسال شد", reply_markup=kb)
 
-# ===================== آپلود فایل =====================
 async def handle_file(message: types.Message):
     user_id = message.from_user.id
     if user_id not in upload_state:
@@ -448,7 +439,6 @@ async def handle_file(message: types.Message):
         return
     state = upload_state[user_id]
 
-    # آپلود سریع
     if state.get("mode") == "fast_upload":
         caption = message.caption or ""
         parts = [p.strip() for p in caption.split("|")]
@@ -485,7 +475,6 @@ async def handle_file(message: types.Message):
         await message.answer(f"✅ فایل با موفقیت ثبت شد!\n📚 {institute} - {grade} - {major} - {subject}", reply_markup=kb)
         return
 
-    # آپلود کتاب (ادمین)
     if state.get("mode") == "book_upload" and state.get("step") == "waiting_for_file":
         if not message.document:
             await message.answer("❌ لطفاً فایل PDF کتاب رو ارسال کن")
@@ -511,7 +500,6 @@ async def handle_file(message: types.Message):
         await message.answer(f"✅ کتاب با موفقیت ثبت شد!\n📖 {state['publisher']} - {state['grade']} - {state['major']} - {state['subject']}", reply_markup=kb)
         return
 
-    # آپلود جزوه/ویدیو (ادمین)
     if state.get("mode") != "admin_upload":
         await message.answer("❌ شما در حالت دانلود هستید")
         return
