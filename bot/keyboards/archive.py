@@ -1,6 +1,4 @@
-# bot/keyboards/archive.py
-
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, types
 from database.core import get_db
 from database.models import Teacher, Publisher
 from sqlalchemy import select
@@ -111,7 +109,11 @@ async def book_publisher_keyboard(grade, major):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     
     async for db in get_db():
-        result = await db.execute(select(Publisher).where(Publisher.type == "book_publisher"))
+        result = await db.execute(
+            select(Publisher).where(
+                Publisher.type == "book_publisher"
+            )
+        )
         publishers = result.scalars().all()
         
         for p in publishers:
@@ -119,6 +121,7 @@ async def book_publisher_keyboard(grade, major):
             if grade in data and major in data[grade]:
                 kb.add(KeyboardButton(p.name))
     
+    kb.add(KeyboardButton("❌ لغو"))
     return kb
 
 # ========== دبیران (از دیتابیس) ==========
