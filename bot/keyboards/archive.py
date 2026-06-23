@@ -1,4 +1,4 @@
-# bot/keyboards/archive.py
+# bot/keyboards/archive.py (کامل و نهایی)
 
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from database.core import get_db
@@ -34,11 +34,31 @@ async def institute_keyboard():
 
     return kb
 
-def publisher_keyboard():
+async def publisher_keyboard():
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add("خیلی سبز")
-    kb.add("نشر الگو")
-    kb.add("گاج")
+
+    async for db in get_db():
+        result = await db.execute(
+            select(Publisher).where(
+                Publisher.type == "book_publisher"
+            )
+        )
+        publishers = result.scalars().all()
+
+    if publishers:
+        for p in publishers:
+            kb.add(KeyboardButton(p.name))
+    else:
+        defaults = [
+            "خیلی سبز",
+            "نشر الگو",
+            "فرمول بیست",
+            "نردبام",
+            "IQ"
+        ]
+        for p in defaults:
+            kb.add(KeyboardButton(p))
+
     return kb
 
 # ========== درس‌های جزوه و ویدیو ==========
@@ -56,60 +76,59 @@ def subject_keyboard(grade, major):
     return kb
 
 # ========== کتاب‌های کمک آموزشی (از دیتابیس) ==========
-async def book_subject_keyboard(publisher_name, grade, major):
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    
-    async for db in get_db():
-        result = await db.execute(select(Publisher).where(Publisher.name == publisher_name))
-        publisher = result.scalar_one_or_none()
-        
-        if not publisher or not publisher.subjects_by_grade:
-            return _book_subject_keyboard_fallback(publisher_name, grade, major)
-        
-        subjects_list = publisher.subjects_by_grade.get(grade, {}).get(major, [])
-        for subject in subjects_list:
-            kb.add(KeyboardButton(subject))
-    
-    return kb
+async def book_subject_keyboard(publisher, grade, major):
+    from database.core import get_db
+    from database.models import Publisher
+    from sqlalchemy import select
+    from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
-def _book_subject_keyboard_fallback(publisher, grade, major):
-    """دیکشنری ثابت برای مواقعی که دیتابیس خالی است"""
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    book_subjects = {
-        "نشر الگو": {
-            "دهم": {"ریاضی": ["فیزیک", "شیمی", "هندسه", "ریاضی"], "تجربی": ["فیزیک", "شیمی", "ریاضی", "زیست شناسی"]},
-            "یازدهم": {"ریاضی": ["حسابان", "آمار و احتمال", "فیزیک", "شیمی", "هندسه"], "تجربی": ["فیزیک", "شیمی", "ریاضی", "زیست شناسی"]},
-            "دوازدهم": {"ریاضی": ["فیزیک", "شیمی", "هندسه", "حسابان", "آمار و احتمال", "گسسته"], "تجربی": ["فیزیک", "شیمی", "ریاضی", "زیست شناسی"]}
-        },
-        "خیلی سبز": {
-            "دهم": {"ریاضی": ["فیزیک", "شیمی", "هندسه", "ریاضی"], "تجربی": ["فیزیک", "شیمی", "ریاضی", "زیست شناسی"]},
-            "یازدهم": {"ریاضی": ["حسابان", "آمار و احتمال", "فیزیک", "شیمی", "هندسه"], "تجربی": ["فیزیک", "شیمی", "ریاضی", "زیست شناسی"]},
-            "دوازدهم": {"ریاضی": ["فیزیک", "شیمی", "هندسه", "حسابان", "آمار و احتمال", "گسسته"], "تجربی": ["فیزیک", "شیمی", "ریاضی", "زیست شناسی"]}
-        },
-        "نردبام": {
-            "دهم": {"ریاضی": ["فیزیک", "شیمی", "هندسه", "ریاضی"], "تجربی": ["فیزیک", "شیمی", "ریاضی", "زیست شناسی"]},
-            "یازدهم": {"ریاضی": ["حسابان", "آمار و احتمال", "فیزیک", "شیمی", "هندسه"], "تجربی": ["فیزیک", "شیمی", "ریاضی", "زیست شناسی"]},
-            "دوازدهم": {"ریاضی": ["فیزیک", "شیمی", "هندسه", "حسابان", "آمار و احتمال", "گسسته"], "تجربی": ["فیزیک", "شیمی", "ریاضی", "زیست شناسی"]}
-        },
-        "فرمول بیست": {
-            "دهم": {"ریاضی": ["فیزیک", "شیمی", "هندسه", "ریاضی", "ادبیات", "دینی", "عربی"], "تجربی": ["فیزیک", "شیمی", "ریاضی", "زیست شناسی", "ادبیات", "دینی", "عربی"]},
-            "یازدهم": {"ریاضی": ["حسابان", "آمار و احتمال", "فیزیک", "شیمی", "هندسه", "ادبیات", "دینی", "عربی"], "تجربی": ["فیزیک", "شیمی", "ریاضی", "زیست شناسی", "ادبیات", "دینی", "عربی"]},
-            "دوازدهم": {"ریاضی": ["فیزیک", "شیمی", "هندسه", "حسابان", "آمار و احتمال", "گسسته", "ادبیات", "دینی", "عربی"], "تجربی": ["فیزیک", "شیمی", "ریاضی", "زیست شناسی", "ادبیات", "دینی", "عربی"]}
-        },
-        "IQ": {
-            "دهم": {"ریاضی": ["فیزیک", "شیمی", "هندسه", "ریاضی"], "تجربی": ["فیزیک", "شیمی", "ریاضی", "زیست شناسی"]},
-            "یازدهم": {"ریاضی": ["حسابان", "آمار و احتمال", "فیزیک", "شیمی", "هندسه"], "تجربی": ["فیزیک", "شیمی", "ریاضی", "زیست شناسی"]},
-            "دوازدهم": {"ریاضی": ["فیزیک", "شیمی", "هندسه", "حسابان", "آمار و احتمال", "گسسته"], "تجربی": ["فیزیک", "شیمی", "ریاضی", "زیست شناسی"]}
-        }
+
+    async for db in get_db():
+        result = await db.execute(
+            select(Publisher).where(
+                Publisher.name == publisher
+            )
+        )
+
+        pub = result.scalar_one_or_none()
+
+        if pub:
+            data = pub.subjects_by_grade or {}
+            if grade in data and major in data[grade]:
+                for subject in data[grade][major]:
+                    kb.add(KeyboardButton(subject))
+                return kb
+
+    # اگر ناشر در دیتابیس نبود یا درسی نداشت، از پیشفرض استفاده کن
+    defaults = {
+        "ریاضی": [
+            "ریاضی",
+            "فیزیک",
+            "شیمی",
+            "هندسه"
+        ],
+        "تجربی": [
+            "زیست شناسی",
+            "فیزیک",
+            "شیمی",
+            "ریاضی"
+        ]
     }
-    books = book_subjects.get(publisher, {}).get(grade, {}).get(major, [])
-    for book in books:
-        kb.add(KeyboardButton(book))
+
+    for s in defaults.get(major, []):
+        kb.add(KeyboardButton(s))
+
     return kb
 
 async def book_publisher_keyboard(grade, major):
+    from database.core import get_db
+    from database.models import Publisher
+    from sqlalchemy import select
+    from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    
+
     async for db in get_db():
         result = await db.execute(
             select(Publisher).where(
@@ -117,19 +136,40 @@ async def book_publisher_keyboard(grade, major):
             )
         )
         publishers = result.scalars().all()
-        
-        for p in publishers:
-            data = p.subjects_by_grade or {}
-            if grade in data and major in data[grade]:
-                kb.add(KeyboardButton(p.name))
-    
+
+    added = set()
+    publisher_names = {p.name for p in publishers}
+
+    for pub in publishers:
+        data = pub.subjects_by_grade or {}
+
+        if (
+            pub.name not in added
+            and grade in data
+            and major in data[grade]
+        ):
+            kb.add(KeyboardButton(pub.name))
+            added.add(pub.name)
+
+    defaults = [
+        "خیلی سبز",
+        "نشر الگو",
+        "فرمول بیست",
+        "نردبام",
+        "IQ"
+    ]
+
+    for name in defaults:
+        if name not in publisher_names:
+            kb.add(KeyboardButton(name))
+
     kb.add(KeyboardButton("❌ لغو"))
     return kb
 
 # ========== دبیران (از دیتابیس) ==========
 async def teacher_keyboard(grade, major, institute, subject):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    
+
     # استانداردسازی نام درس‌ها
     subject_map = {
         "زیست": "زیست شناسی",
@@ -138,31 +178,43 @@ async def teacher_keyboard(grade, major, institute, subject):
         "دینی": "دین و زندگی",
         "ادبیات": "فارسی",
     }
+
     subject = subject_map.get(subject, subject)
-    
+
+    grade = grade.strip()
+    major = major.strip()
+    institute = institute.strip()
+    subject = " ".join(subject.split())
+
     async for db in get_db():
-        # پیدا کردن publisher
-        pub_result = await db.execute(select(Publisher).where(Publisher.name == institute))
-        publisher = pub_result.scalar_one_or_none()
-        
-        if not publisher:
+
+        pub = await db.scalar(
+            select(Publisher)
+            .where(Publisher.name.ilike(institute))
+        )
+
+        if not pub:
             return None
-        
-        # پیدا کردن دبیرها
+
         result = await db.execute(
             select(Teacher).where(
-                Teacher.publisher_id == publisher.id,
-                Teacher.grade == grade,
-                Teacher.major == major,
-                Teacher.subject == subject
+                Teacher.publisher_id == pub.id,
+                Teacher.grade.ilike(grade),
+                Teacher.major.ilike(major),
+                Teacher.subject.ilike(subject)
             )
         )
+
         teachers = result.scalars().all()
-    
+
     if not teachers:
         return None
-    
+
+    added = set()
+
     for t in teachers:
-        kb.add(KeyboardButton(t.name))
-    
+        if t.name not in added:
+            kb.add(KeyboardButton(t.name))
+            added.add(t.name)
+
     return kb
