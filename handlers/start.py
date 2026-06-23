@@ -111,7 +111,7 @@ async def handle_buttons(message: types.Message):
             await message.answer("⛔ دسترسی نداری")
             return
         upload_state[user_id] = {"mode": "book_upload", "category": "book", "type": "pdf", "step": "publisher"}
-        await message.answer("📖 **آپلود کتاب کمک آموزشی**\n\nناشر رو انتخاب کن:", reply_markup=publisher_keyboard())
+        await message.answer("📖 **آپلود کتاب کمک آموزشی**\n\nناشر رو انتخاب کن:", reply_markup=await publisher_keyboard())
         return
 
     # ===================== آپلود جزوه =====================
@@ -586,7 +586,7 @@ async def handle_buttons(message: types.Message):
             await message.answer("🏛 موسسه را انتخاب کن", reply_markup=await institute_keyboard())
             return
 
-        if state.get("mode") == "user_download" and state.get("step") != "book_major":
+        if state.get("mode") == "user_download" and state.get("category") != "book":
             state["grade"] = grade
             state["major"] = major
             state["step"] = "institute"
@@ -594,16 +594,23 @@ async def handle_buttons(message: types.Message):
             return
 
     # ===================== کتاب: انتخاب ناشر (دانلود) =====================
-    if text in ["نشر الگو", "خیلی سبز", "نردبام", "فرمول بیست", "IQ"]:
-        if user_id in upload_state and upload_state[user_id].get("step") == "book_publisher":
-            state = upload_state[user_id]
-            state["publisher"] = text
-            state["step"] = "book_subject_download"
-            await message.answer(
-                "📖 درس مورد نظر رو انتخاب کن:",
-                reply_markup=await book_subject_keyboard(text, state["grade"], state["major"])
+    if (
+        user_id in upload_state
+        and upload_state[user_id].get("step") == "book_publisher"
+    ):
+        state = upload_state[user_id]
+        state["publisher"] = text
+        state["step"] = "book_subject_download"
+
+        await message.answer(
+            "📖 درس مورد نظر رو انتخاب کن:",
+            reply_markup=await book_subject_keyboard(
+                text,
+                state["grade"],
+                state["major"]
             )
-            return
+        )
+        return
 
     # ===================== کتاب: انتخاب درس (دانلود) =====================
     if user_id in upload_state and upload_state[user_id].get("step") == "book_subject_download":
@@ -629,27 +636,22 @@ async def handle_buttons(message: types.Message):
 
     # ===================== موسسه (جزوه/ویدیو) =====================
     if (
-        text in ["ماز", "آلفا اسکول", "تایتان", "کلاسینو"]
-        and (
-            user_id not in upload_state
-            or upload_state[user_id].get("mode")
-            not in ["add_teacher", "add_publisher"]
-        )
+        user_id in upload_state
+        and upload_state[user_id].get("step") == "institute"
     ):
-        if user_id not in upload_state:
-            await message.answer("❌ لطفاً از ابتدا شروع کن")
-            return
         state = upload_state[user_id]
-        if state.get("mode") == "admin_upload":
-            state["institute"] = text
-            state["step"] = "subject"
-            await message.answer("📚 درس را انتخاب کن", reply_markup=subject_keyboard(state["grade"], state["major"]))
-            return
-        if state.get("mode") == "user_download":
-            state["institute"] = text
-            state["step"] = "subject"
-            await message.answer("📚 درس را انتخاب کن", reply_markup=subject_keyboard(state["grade"], state["major"]))
-            return
+
+        state["institute"] = text
+        state["step"] = "subject"
+
+        await message.answer(
+            "📚 درس را انتخاب کن",
+            reply_markup=subject_keyboard(
+                state["grade"],
+                state["major"]
+            )
+        )
+        return
 
     # ===================== درس (جزوه/ویدیو) =====================
     if user_id in upload_state and upload_state[user_id].get("step") == "subject":
