@@ -63,12 +63,11 @@ async def book_subject_keyboard(publisher_name, grade, major):
         result = await db.execute(select(Publisher).where(Publisher.name == publisher_name))
         publisher = result.scalar_one_or_none()
         
-        if not publisher or not publisher.subjects_by_major:
-            # fallback به دیکشنری ثابت
+        if not publisher or not publisher.subjects_by_grade:
             return _book_subject_keyboard_fallback(publisher_name, grade, major)
         
-        subjects = publisher.subjects_by_major.get(major, [])
-        for subject in subjects:
+        subjects_list = publisher.subjects_by_grade.get(grade, {}).get(major, [])
+        for subject in subjects_list:
             kb.add(KeyboardButton(subject))
     
     return kb
@@ -108,13 +107,18 @@ def _book_subject_keyboard_fallback(publisher, grade, major):
         kb.add(KeyboardButton(book))
     return kb
 
-def book_publisher_keyboard(grade, major):
+async def book_publisher_keyboard(grade, major):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add("نشر الگو")
-    kb.add("خیلی سبز")
-    kb.add("نردبام")
-    kb.add("فرمول بیست")
-    kb.add("IQ")
+    
+    async for db in get_db():
+        result = await db.execute(select(Publisher).where(Publisher.type == "book_publisher"))
+        publishers = result.scalars().all()
+        
+        for p in publishers:
+            data = p.subjects_by_grade or {}
+            if grade in data and major in data[grade]:
+                kb.add(KeyboardButton(p.name))
+    
     return kb
 
 # ========== دبیران (از دیتابیس) ==========
