@@ -59,7 +59,7 @@ async def handle_buttons(message: types.Message):
             KeyboardButton("📤 آپلود جزوه"),
             KeyboardButton("🎥 آپلود ویدئو"),
             KeyboardButton("📖 آپلود کتاب"),
-            KeyboardButton("➕ اضافه کردن دبیر"),
+            KeyboardButton("🗑 حذف دبیر"),
             KeyboardButton("➕ اضافه کردن انتشارات"),
             KeyboardButton("📋 لیست فایل‌ها"),
             KeyboardButton("🗑 حذف فایل"),
@@ -260,7 +260,7 @@ async def handle_buttons(message: types.Message):
                     KeyboardButton("📤 آپلود جزوه"),
                     KeyboardButton("🎥 آپلود ویدئو"),
                     KeyboardButton("📖 آپلود کتاب"),
-                    KeyboardButton("➕ اضافه کردن دبیر"),
+                    KeyboardButton("🗑 حذف دبیر"),
                     KeyboardButton("➕ اضافه کردن انتشارات"),
                     KeyboardButton("📋 لیست فایل‌ها"),
                     KeyboardButton("🗑 حذف فایل"),
@@ -326,7 +326,7 @@ async def handle_buttons(message: types.Message):
                     KeyboardButton("📤 آپلود جزوه"),
                     KeyboardButton("🎥 آپلود ویدئو"),
                     KeyboardButton("📖 آپلود کتاب"),
-                    KeyboardButton("➕ اضافه کردن دبیر"),
+                    KeyboardButton("🗑 حذف دبیر"),
                     KeyboardButton("➕ اضافه کردن انتشارات"),
                     KeyboardButton("📋 لیست فایل‌ها"),
                     KeyboardButton("🗑 حذف فایل"),
@@ -349,109 +349,88 @@ async def handle_buttons(message: types.Message):
                     await message.answer(f"⚠️ درس {text} قبلاً اضافه شده!")
                 return
 
-    # ===================== اضافه کردن دبیر (ادمین) =====================
-    if text == "➕ اضافه کردن دبیر":
+    # ===================== حذف دبیر (ادمین) =====================
+    if text == "🗑 حذف دبیر":
         if str(user_id) != str(ADMIN_ID):
             await message.answer("⛔ دسترسی نداری")
             return
-        upload_state[user_id] = {"mode": "add_teacher", "step": "ask_name"}
+        upload_state[user_id] = {"mode": "delete_teacher", "step": "ask_institute"}
         await message.answer(
-            "📝 **اضافه کردن دبیر جدید**\n\n"
-            "نام کامل دبیر رو وارد کن:\n"
-            "(مثال: محمدرضا شجاعی)"
+            "🗑 **حذف دبیر**\n\nموسسه رو انتخاب کن:",
+            reply_markup=await institute_keyboard()
         )
         return
 
-    if user_id in upload_state and upload_state[user_id].get("mode") == "add_teacher":
+    if user_id in upload_state and upload_state[user_id].get("mode") == "delete_teacher":
         state = upload_state[user_id]
-        
-        if state.get("step") == "ask_name":
-            state["name"] = text
-            state["step"] = "ask_publisher"
-            
-            async for db in get_db():
-                result = await db.execute(
-                    select(Publisher).where(
-                        Publisher.type == "institute"
-                    )
-                )
-                publishers = result.scalars().all()
-            
-            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            for p in publishers:
-                kb.add(p.name)
-            kb.add("❌ لغو")
-            
-            await message.answer(
-                f"📌 دبیر: {state['name']}\n\n"
-                "موسسه مربوطه رو انتخاب کن:",
-                reply_markup=kb
-            )
-            return
-        
-        if state.get("step") == "ask_publisher":
-            async for db in get_db():
-                result = await db.execute(select(Publisher).where(Publisher.name == text))
-                publisher = result.scalar_one_or_none()
-                if not publisher:
-                    await message.answer("❌ موسسه پیدا نشد. دوباره انتخاب کن.")
-                    return
-                state["publisher_id"] = publisher.id
-                state["publisher_name"] = publisher.name
-                state["step"] = "ask_grade"
-            
+
+        if state.get("step") == "ask_institute":
+            state["institute"] = text
+            state["step"] = "ask_grade"
             kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
             kb.add("دهم", "یازدهم", "دوازدهم")
+            kb.add("❌ لغو")
             await message.answer(
-                f"📌 دبیر: {state['name']}\n"
-                f"🏛 موسسه: {state['publisher_name']}\n\n"
-                "پایه رو انتخاب کن:",
+                f"🏛 موسسه: {text}\n\nپایه رو انتخاب کن:",
                 reply_markup=kb
             )
             return
-        
+
         if state.get("step") == "ask_grade":
             state["grade"] = text
             state["step"] = "ask_major"
-            
             kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
             kb.add("ریاضی", "تجربی", "انسانی")
+            kb.add("❌ لغو")
             await message.answer(
-                f"📌 دبیر: {state['name']}\n"
-                f"🏛 موسسه: {state.get('publisher_name', '')}\n"
-                f"📚 پایه: {text}\n\n"
-                "رشته رو انتخاب کن:",
+                f"🏛 موسسه: {state['institute']}\n"
+                f"📚 پایه: {text}\n\nرشته رو انتخاب کن:",
                 reply_markup=kb
             )
             return
-        
+
         if state.get("step") == "ask_major":
             state["major"] = text
-            state["step"] = "ask_subject"
-            
-            subjects = {
-                "ریاضی": ["فیزیک", "شیمی", "ریاضی", "هندسه", "فارسی", "عربی", "حسابان", "گسسته", "آمار و احتمال"],
-                "تجربی": ["زیست شناسی", "شیمی", "فیزیک", "ریاضی", "فارسی", "عربی"],
-                "انسانی": ["علوم و فنون ادبی", "ریاضی و آمار", "جامعه شناسی", "منطق", "اقتصاد", "فارسی", 
-                           "روان شناسی", "فلسفه", "عربی تخصصی", "دین و زندگی", "فلسفه و منطق", "تاریخ", "جغرافیا", "دینی"]
-            }
-            
+            state["step"] = "ask_teacher"
+
+            async for db in get_db():
+                pub = await db.scalar(
+                    select(Publisher).where(Publisher.name == state["institute"])
+                )
+                if not pub:
+                    await message.answer("❌ موسسه پیدا نشد")
+                    return
+                result = await db.execute(
+                    select(Teacher).where(
+                        Teacher.publisher_id == pub.id,
+                        Teacher.grade == state["grade"],
+                        Teacher.major == text
+                    )
+                )
+                teachers = result.scalars().all()
+
+            if not teachers:
+                await message.answer("❌ دبیری برای این انتخاب‌ها پیدا نشد")
+                del upload_state[user_id]
+                return
+
             kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            for s in subjects.get(text, []):
-                kb.add(s)
+            for t in teachers:
+                kb.add(KeyboardButton(t.name))
             kb.add("❌ لغو")
-            
+
+            state["teachers_list"] = {t.name: t.id for t in teachers}
+
             await message.answer(
-                f"📌 دبیر: {state['name']}\n"
-                f"🏛 موسسه: {state.get('publisher_name', '')}\n"
+                f"🏛 موسسه: {state['institute']}\n"
                 f"📚 پایه: {state['grade']}\n"
                 f"🎓 رشته: {text}\n\n"
-                "درس رو انتخاب کن:",
+                "دبیر مورد نظر برای حذف رو انتخاب کن:",
                 reply_markup=kb
             )
             return
-        
-        if state.get("step") == "ask_subject":
+
+        if state.get("step") == "ask_teacher":
             if text == "❌ لغو":
                 del upload_state[user_id]
                 kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -460,43 +439,39 @@ async def handle_buttons(message: types.Message):
                     KeyboardButton("📤 آپلود جزوه"),
                     KeyboardButton("🎥 آپلود ویدئو"),
                     KeyboardButton("📖 آپلود کتاب"),
-                    KeyboardButton("➕ اضافه کردن دبیر"),
+                    KeyboardButton("🗑 حذف دبیر"),
                     KeyboardButton("➕ اضافه کردن انتشارات"),
                     KeyboardButton("📋 لیست فایل‌ها"),
                     KeyboardButton("🗑 حذف فایل"),
                     KeyboardButton("📊 آمار")
                 )
-                await message.answer("❌ عملیات لغو شد", reply_markup=kb)
+                await message.answer("❌ لغو شد", reply_markup=kb)
                 return
-            
-            state["subject"] = text
-            
+
+            teacher_id = state.get("teachers_list", {}).get(text)
+            if not teacher_id:
+                await message.answer("❌ دبیر پیدا نشد")
+                return
+
             async for db in get_db():
-                teacher = Teacher(
-                    name=state["name"],
-                    publisher_id=state["publisher_id"],
-                    grade=state["grade"],
-                    major=state["major"],
-                    subject=state["subject"]
+                result = await db.execute(
+                    select(Teacher).where(Teacher.id == teacher_id)
                 )
-                db.add(teacher)
-                await db.commit()
-            
-            await message.answer(
-                f"✅ دبیر {state['name']} با موفقیت اضافه شد!\n\n"
-                f"📚 {state['grade']} - {state['major']} - {state['subject']}\n"
-                f"🏛 {state.get('publisher_name', '')}"
-            )
-            
+                teacher = result.scalar_one_or_none()
+                if teacher:
+                    await db.delete(teacher)
+                    await db.commit()
+
+            await message.answer(f"✅ دبیر {text} با موفقیت حذف شد!")
             del upload_state[user_id]
-            
+
             kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
             kb.add(
                 KeyboardButton("⚡ آپلود سریع"),
                 KeyboardButton("📤 آپلود جزوه"),
                 KeyboardButton("🎥 آپلود ویدئو"),
                 KeyboardButton("📖 آپلود کتاب"),
-                KeyboardButton("➕ اضافه کردن دبیر"),
+                KeyboardButton("🗑 حذف دبیر"),
                 KeyboardButton("➕ اضافه کردن انتشارات"),
                 KeyboardButton("📋 لیست فایل‌ها"),
                 KeyboardButton("🗑 حذف فایل"),
@@ -511,6 +486,13 @@ async def handle_buttons(message: types.Message):
             del upload_state[user_id]
         upload_state[user_id] = {"mode": "user_download", "step": "book_grade", "category": "book"}
         await message.answer("📖 کدوم پایه؟", reply_markup=grade_keyboard())
+        return
+
+    # ===================== ناشران (برای آپلود کتاب - ادمین) =====================
+    if user_id in upload_state and upload_state[user_id].get("mode") == "book_upload" and upload_state[user_id].get("step") == "publisher":
+        upload_state[user_id]["publisher"] = text
+        upload_state[user_id]["step"] = "grade"
+        await message.answer("پایه را انتخاب کن", reply_markup=grade_keyboard())
         return
 
     # ===================== GRADE =====================
@@ -542,14 +524,6 @@ async def handle_buttons(message: types.Message):
         upload_state[user_id] = {"mode": "user_download", "step": "major", "grade": text}
         await message.answer("رشته را انتخاب کن", reply_markup=major_keyboard(text))
         return
-
-    # ===================== ناشران (برای آپلود کتاب - ادمین) =====================
-    if text in ["خیلی سبز", "نشر الگو", "نردبام", "فرمول بیست", "IQ"]:
-        if user_id in upload_state and upload_state[user_id].get("mode") == "book_upload":
-            upload_state[user_id]["publisher"] = text
-            upload_state[user_id]["step"] = "grade"
-            await message.answer("پایه را انتخاب کن", reply_markup=grade_keyboard())
-            return
 
     # ===================== MAJOR =====================
     if text.startswith("رشته:"):
@@ -844,7 +818,7 @@ async def delete_file(message: types.Message, file_id: str):
         KeyboardButton("📤 آپلود جزوه"),
         KeyboardButton("🎥 آپلود ویدئو"),
         KeyboardButton("📖 آپلود کتاب"),
-        KeyboardButton("➕ اضافه کردن دبیر"),
+        KeyboardButton("🗑 حذف دبیر"),
         KeyboardButton("➕ اضافه کردن انتشارات"),
         KeyboardButton("📋 لیست فایل‌ها"),
         KeyboardButton("🗑 حذف فایل"),
@@ -874,7 +848,7 @@ async def show_stats(message: types.Message):
         KeyboardButton("📤 آپلود جزوه"),
         KeyboardButton("🎥 آپلود ویدئو"),
         KeyboardButton("📖 آپلود کتاب"),
-        KeyboardButton("➕ اضافه کردن دبیر"),
+        KeyboardButton("🗑 حذف دبیر"),
         KeyboardButton("➕ اضافه کردن انتشارات"),
         KeyboardButton("📋 لیست فایل‌ها"),
         KeyboardButton("🗑 حذف فایل"),
@@ -1041,7 +1015,7 @@ async def handle_file(message: types.Message):
             major=state["major"],
             institute=state["institute"],
             subject=state["subject"],
-            teacher=state["teacher"],
+            teacher=state.get("teacher"),  # <-- اصلاح شده با get
             file_id=file_id,
             file_name=file_name,
             uploaded_by=user_id
