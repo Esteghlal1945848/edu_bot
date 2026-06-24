@@ -131,36 +131,21 @@ async def book_publisher_keyboard(grade, major):
 
     async for db in get_db():
         result = await db.execute(
-            select(Publisher).where(
-                Publisher.type == "book_publisher"
-            )
+            select(Publisher).where(Publisher.type == "book_publisher")
         )
         publishers = result.scalars().all()
 
+    # همه ناشران book_publisher رو نشون بده
     added = set()
-    publisher_names = {p.name for p in publishers}
-
     for pub in publishers:
-        data = pub.subjects_by_grade or {}
-
-        if (
-            pub.name not in added
-            and grade in data
-            and major in data[grade]
-        ):
+        if pub.name not in added:
             kb.add(KeyboardButton(pub.name))
             added.add(pub.name)
 
-    defaults = [
-        "خیلی سبز",
-        "نشر الگو",
-        "فرمول بیست",
-        "نردبام",
-        "IQ"
-    ]
-
+    # پیشفرض‌هایی که توی دیتابیس نیستن
+    defaults = ["خیلی سبز", "نشر الگو", "فرمول بیست", "نردبام", "IQ"]
     for name in defaults:
-        if name not in publisher_names:
+        if name not in added:
             kb.add(KeyboardButton(name))
 
     kb.add(KeyboardButton("❌ لغو"))
