@@ -1,5 +1,3 @@
-# bot/data/teacher.py (کامل و نهایی با حذف کلاسینو و اضافه شدن تایتان)
-
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from database.core import get_db
 from database.models import Publisher, Teacher
@@ -11,14 +9,13 @@ async def teacher_keyboard(grade, major, institute, subject):
     اگر در دیتابیس نبود، از دیکشنری ثابت استفاده کن
     """
     
-    # استانداردسازی نام درس‌ها
+    # استانداردسازی نام درس‌ها (هماهنگ با subject_keyboard)
     subject_map = {
         "زیست": "زیست شناسی",
         "علوم و فنون": "علوم و فنون ادبی",
         "روانشناسی": "روان شناسی",
         "دینی": "دین و زندگی",
         "ادبیات": "فارسی",
-        "علوم و فنون ادبی": "علوم و فنون ادبی",
     }
     subject = subject_map.get(subject, subject)
 
@@ -29,7 +26,6 @@ async def teacher_keyboard(grade, major, institute, subject):
 
     # ===== ابتدا از دیتابیس بخوان =====
     async for db in get_db():
-        # پیدا کردن Publisher
         pub = await db.scalar(
             select(Publisher).where(
                 func.lower(Publisher.name) == func.lower(institute)
@@ -37,7 +33,6 @@ async def teacher_keyboard(grade, major, institute, subject):
         )
 
         if pub:
-            # پیدا کردن دبیرها از دیتابیس
             result = await db.execute(
                 select(Teacher).where(
                     Teacher.publisher_id == pub.id,
@@ -60,7 +55,6 @@ async def teacher_keyboard(grade, major, institute, subject):
     # ===== اگر در دیتابیس نبود، از دیکشنری ثابت استفاده کن =====
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
 
-    # دیکشنری دبیران (بدون کلاسینو)
     data = {
         "ماز": {
             ("دهم", "انسانی", "علوم و فنون ادبی"): ["عماد فیض آبادی"],
