@@ -19,7 +19,8 @@ import asyncio
 from datetime import datetime
 
 ADMIN_ID = 7336595194
-CHANNEL_ID = -1003918140957
+CHANNEL_ID = -1003918140957  # آیدی کانالت رو اینجا بذار
+CHANNEL_LINK = "https://t.me/YourChannelUsername"  # لینک کانالت رو اینجا بذار
 
 
 # =========================
@@ -39,10 +40,77 @@ async def main_menu(user_id: int) -> types.ReplyKeyboardMarkup:
 
 
 # =========================
+# چک کردن عضویت در کانال
+# =========================
+async def check_subscription(user_id: int, bot) -> bool:
+    try:
+        member = await bot.get_chat_member(CHANNEL_ID, user_id)
+        return member.status in ["member", "administrator", "creator"]
+    except:
+        return False
+
+
+# =========================
+# پیام عضویت اجباری
+# =========================
+async def send_join_message(message: types.Message):
+    kb = types.InlineKeyboardMarkup(row_width=1)
+    kb.add(
+        types.InlineKeyboardButton(
+            "📢 عضویت در کانال",
+            url=CHANNEL_LINK
+        )
+    )
+    await message.answer(
+        "🔒 **برای استفاده از ربات باید عضو کانال ما باشید.**\n\n"
+        "👇 روی دکمه زیر کلیک کنید، عضو شوید و سپس **/start** رو بزنید.",
+        reply_markup=kb,
+        parse_mode="Markdown"
+    )
+
+
+# =========================
+# ارسال فایل با تایمر ۳۰ ثانیه
+# =========================
+async def send_file_with_timer(bot, chat_id: int, file_id: str, caption: str = "", delay: int = 30):
+    """ارسال فایل با پیام تایمر و حذف خودکار بعد از ۳۰ ثانیه"""
+    
+    # ارسال فایل
+    sent_file = await bot.send_document(chat_id, file_id, caption=caption)
+    
+    # ارسال پیام تایمر
+    timer_msg = await bot.send_message(
+        chat_id,
+        f"⏳ **این فایل تا {delay} ثانیه دیگه پاک میشه!**\n\n"
+        f"⬇️ لطفاً سریع دانلود کنید.\n\n"
+        f"🕐 {delay} ثانیه مهلت دارید.",
+        parse_mode="Markdown"
+    )
+    
+    # حذف خودکار پیام تایمر بعد از delay ثانیه
+    async def delete_timer():
+        await asyncio.sleep(delay)
+        try:
+            await bot.delete_message(chat_id, timer_msg.message_id)
+        except:
+            pass
+    
+    asyncio.create_task(delete_timer())
+    return sent_file
+
+
+# =========================
 # START
 # =========================
 async def cmd_start(message: types.Message):
     user = message.from_user
+    bot = message.bot
+    
+    # ===== چک کردن عضویت =====
+    if not await check_subscription(user.id, bot):
+        await send_join_message(message)
+        return
+    
     kb = await main_menu(user.id)
     await message.answer(
         "🎓 **به بزرگترین آرشیو آموزشی خوش آمدید!**\n\n"
@@ -136,6 +204,13 @@ async def auto_save_from_channel(message: types.Message):
 async def handle_buttons(message: types.Message):
     text = message.text
     user_id = message.from_user.id
+    bot = message.bot
+    
+    # ===== چک کردن عضویت (به جز دکمه برگشت) =====
+    if text not in ["🔙 برگشت به منو"]:
+        if not await check_subscription(user_id, bot):
+            await send_join_message(message)
+            return
 
     # ===================== برگشت به منوی اصلی =====================
     if text == "🔙 برگشت به منو":
@@ -1023,7 +1098,7 @@ async def handle_buttons(message: types.Message):
         return
 
 
-# ===================== لیست کاربران (ادمین) - اصلاح شده =====================
+# ===================== لیست کاربران (ادمین) =====================
 async def list_users(message: types.Message, page: int = 1):
     user_id = message.from_user.id
     per_page = 10
@@ -1052,14 +1127,12 @@ async def list_users(message: types.Message, page: int = 1):
             text += f"{i}. {user.full_name} - {username}\n"
             text += f"   🆔 {user.telegram_id}\n"
         
-        # دکمه‌های صفحه‌بندی با InlineKeyboard
         kb = types.InlineKeyboardMarkup(row_width=2)
         if page > 1:
             kb.insert(types.InlineKeyboardButton("◀️ قبلی", callback_data=f"users_page_{page-1}"))
         if page * per_page < total:
             kb.insert(types.InlineKeyboardButton("▶️ بعدی", callback_data=f"users_page_{page+1}"))
         
-        # دکمه برگشت به منو
         back_kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
         back_kb.add(KeyboardButton("🔙 برگشت به منو"))
         
@@ -1227,6 +1300,7 @@ async def backup_database(message: types.Message):
 # ===================== نمایش کتاب‌ها (کاربر) =====================
 async def show_book_archives(message: types.Message, state: dict):
     user_id = message.from_user.id
+    bot = message.bot
     async for db in get_db():
         query = select(Archive).where(
             Archive.category == "book",
@@ -1253,7 +1327,10 @@ async def show_book_archives(message: types.Message, state: dict):
         if archive.caption:
             caption += f"📝 {archive.caption}\n"
         caption += f"📌 {archive.book_name or 'معمولی'}"
-        await message.answer_document(archive.file_id, caption=caption)
+        
+        # ارسال با تایمر ۳۰ ثانیه
+        await send_file_with_timer(bot, user_id, archive.file_id, caption)
+        
     if user_id in upload_state:
         del upload_state[user_id]
     kb = await main_menu(user_id)
@@ -1263,6 +1340,7 @@ async def show_book_archives(message: types.Message, state: dict):
 # ===================== نمایش فایل‌ها (کاربر) =====================
 async def show_archives(message: types.Message, state: dict):
     user_id = message.from_user.id
+    bot = message.bot
     category = state.get("category", "pdf")
     async for db in get_db():
         query = select(Archive).where(
@@ -1296,10 +1374,10 @@ async def show_archives(message: types.Message, state: dict):
             caption += f"👨‍🏫 دبیر: {archive.teacher}\n"
         if archive.book_name:
             caption += f"📌 {archive.book_name}"
-        if archive.category in ["pdf", "book"]:
-            await message.answer_document(archive.file_id, caption=caption)
-        else:
-            await message.answer_video(archive.file_id, caption=caption)
+        
+        # ارسال با تایمر ۳۰ ثانیه
+        await send_file_with_timer(bot, user_id, archive.file_id, caption)
+        
     if user_id in upload_state:
         del upload_state[user_id]
     kb = await main_menu(user_id)
