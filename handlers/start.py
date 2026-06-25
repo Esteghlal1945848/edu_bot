@@ -339,14 +339,24 @@ async def handle_buttons(message: types.Message):
                 if "temp_subjects" not in upload_state[user_id]:
                     upload_state[user_id]["temp_subjects"] = []
                 
-                if text not in upload_state[user_id]["temp_subjects"]:
-                    upload_state[user_id]["temp_subjects"].append(text)
+                # split کردن بر اساس خط جدید
+                new_subjects = [s.strip() for s in text.split("\n") if s.strip()]
+                added_list = []
+                
+                for subject in new_subjects:
+                    if subject not in upload_state[user_id]["temp_subjects"]:
+                        upload_state[user_id]["temp_subjects"].append(subject)
+                        added_list.append(subject)
+                
+                if added_list:
                     await message.answer(
-                        f"✅ درس {text} به لیست اضافه شد.\n\n"
-                        f"📚 لیست فعلی:\n" + "\n".join([f"   • {s}" for s in upload_state[user_id]["temp_subjects"]])
+                        f"✅ {len(added_list)} درس اضافه شد:\n" + 
+                        "\n".join([f"   • {s}" for s in added_list]) +
+                        f"\n\n📚 لیست فعلی:\n" + 
+                        "\n".join([f"   • {s}" for s in upload_state[user_id]["temp_subjects"]])
                     )
                 else:
-                    await message.answer(f"⚠️ درس {text} قبلاً اضافه شده!")
+                    await message.answer("⚠️ هیچ درس جدیدی اضافه نشد (همه تکراری بودن)")
                 return
 
     # ===================== حذف دبیر (ادمین) =====================
@@ -1015,7 +1025,7 @@ async def handle_file(message: types.Message):
             major=state["major"],
             institute=state["institute"],
             subject=state["subject"],
-            teacher=state.get("teacher"),  # <-- اصلاح شده با get
+            teacher=state.get("teacher"),
             file_id=file_id,
             file_name=file_name,
             uploaded_by=user_id
