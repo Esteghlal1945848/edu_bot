@@ -858,15 +858,20 @@ async def show_stats(message: types.Message):
     )
     await message.answer("👑 پنل مدیریت", reply_markup=kb)
 
-# ===================== آپلود فایل (ادمین) - اصلاح نهایی =====================
+# ===================== آپلود فایل (ادمین) - نهایی و درست =====================
 async def handle_file(message: types.Message):
     user_id = message.from_user.id
+    
+    # دیباگ
+    print(f"📁 handle_file اجرا شد! user_id: {user_id}")
+    print(f"📄 document: {message.document}, video: {message.video}")
     
     if user_id not in upload_state:
         await message.answer("❌ ابتدا از پنل ادمین آپلود رو شروع کن")
         return
     
     state = upload_state[user_id]
+    print(f"📊 state: {state}")
 
     # ===================== آپلود سریع =====================
     if state.get("mode") == "fast_upload":
