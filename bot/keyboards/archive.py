@@ -1,6 +1,6 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from database.core import get_db
-from database.models import Teacher, Publisher
+from database.models import Publisher
 from sqlalchemy import select
 
 def grade_keyboard():
@@ -30,7 +30,7 @@ async def institute_keyboard():
         kb.add(KeyboardButton(ins.name))
         added.add(ins.name)
 
-    # پیشفرض‌هایی که توی دیتابیس نیستن
+    # پیشفرض‌هایی که توی دیتابیس نیستن (بدون کلاسینو)
     defaults = ["ماز", "آلفا اسکول", "تایتان"]
     for name in defaults:
         if name not in added:
