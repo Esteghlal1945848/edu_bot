@@ -20,7 +20,7 @@ from datetime import datetime
 
 ADMIN_ID = 7336595194
 CHANNEL_ID = -1002505515904  # آیدی کانالت رو اینجا بذار
-CHANNEL_LINK = "https://t.me/YourChannelUsername"  # لینک کانالت رو اینجا بذار
+CHANNEL_LINK = "https://t.me/School_learny"  # لینک کانالت رو اینجا بذار
 
 
 # =========================
