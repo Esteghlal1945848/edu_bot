@@ -31,7 +31,7 @@ async def institute_keyboard():
         added.add(ins.name)
 
     # پیشفرض‌هایی که توی دیتابیس نیستن
-    defaults = ["ماز", "آلفا اسکول", "تایتان", "کلاسینو"]
+    defaults = ["ماز", "آلفا اسکول", "تایتان"]
     for name in defaults:
         if name not in added:
             kb.add(KeyboardButton(name))
@@ -153,58 +153,4 @@ async def book_publisher_keyboard(grade, major):
             kb.add(KeyboardButton(name))
 
     kb.add(KeyboardButton("❌ لغو"))
-    return kb
-
-# ========== دبیران (از دیتابیس) ==========
-async def teacher_keyboard(grade, major, institute, subject):
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-
-    # استانداردسازی نام درس‌ها
-    subject_map = {
-        "زیست": "زیست شناسی",
-        "علوم و فنون": "علوم و فنون ادبی",
-        "روانشناسی": "روان شناسی",
-        "دینی": "دین و زندگی",
-        "ادبیات": "فارسی",
-        "علوم و فنون ادبی": "علوم و فنون ادبی",
-    }
-
-    subject = subject_map.get(subject, subject)
-
-    grade = grade.strip()
-    major = major.strip()
-    institute = institute.strip()
-    subject = " ".join(subject.split())
-
-    async for db in get_db():
-
-        pub = await db.scalar(
-            select(Publisher)
-            .where(Publisher.name.ilike(institute))
-        )
-
-        if not pub:
-            return None
-
-        result = await db.execute(
-            select(Teacher).where(
-                Teacher.publisher_id == pub.id,
-                Teacher.grade.ilike(grade),
-                Teacher.major.ilike(major),
-                Teacher.subject.ilike(subject)
-            )
-        )
-
-        teachers = result.scalars().all()
-
-    if not teachers:
-        return None
-
-    added = set()
-
-    for t in teachers:
-        if t.name not in added:
-            kb.add(KeyboardButton(t.name))
-            added.add(t.name)
-
     return kb
