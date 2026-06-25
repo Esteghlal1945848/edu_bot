@@ -1,5 +1,3 @@
-# handlers/start.py (کامل و نهایی - با ساختار درست handle_file)
-
 from aiogram import types
 from sqlalchemy import select, func
 from database.core import get_db
@@ -860,7 +858,7 @@ async def show_stats(message: types.Message):
     )
     await message.answer("👑 پنل مدیریت", reply_markup=kb)
 
-# ===================== آپلود فایل (ادمین) =====================
+# ===================== آپلود فایل (ادمین) - اصلاح نهایی =====================
 async def handle_file(message: types.Message):
     user_id = message.from_user.id
     
@@ -911,134 +909,136 @@ async def handle_file(message: types.Message):
         await message.answer(f"✅ فایل با موفقیت ثبت شد!\n📚 {institute} - {grade} - {major} - {subject}", reply_markup=kb)
         return
 
-    # ===================== آپلود کتاب (ادمین) - دریافت فایل =====================
-    if state.get("mode") == "book_upload" and state.get("step") == "waiting_for_file":
-        if str(user_id) != str(ADMIN_ID):
-            await message.answer("⛔ دسترسی نداری")
-            return
-        if not message.document:
-            await message.answer("❌ لطفاً فایل PDF کتاب رو ارسال کن")
+    # ===================== آپلود کتاب (ادمین) =====================
+    if state.get("mode") == "book_upload":
+        
+        # مرحله ۱: دریافت فایل
+        if state.get("step") == "waiting_for_file":
+            if str(user_id) != str(ADMIN_ID):
+                await message.answer("⛔ دسترسی نداری")
+                return
+            if not message.document:
+                await message.answer("❌ لطفاً فایل PDF کتاب رو ارسال کن")
+                return
+            
+            state["temp_file_id"] = message.document.file_id
+            state["temp_file_name"] = message.document.file_name or "unknown.pdf"
+            state["step"] = "waiting_for_caption_book"
+            
+            await message.answer(
+                f"✅ فایل کتاب با موفقیت دریافت شد!\n\n"
+                f"📄 {state['temp_file_name']}\n\n"
+                f"📝 حالا کپشن کتاب رو وارد کن:",
+                reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(
+                    KeyboardButton("❌ لغو")
+                )
+            )
             return
         
-        state["temp_file_id"] = message.document.file_id
-        state["temp_file_name"] = message.document.file_name or "unknown.pdf"
-        state["step"] = "waiting_for_caption_book"
-        
+        # مرحله ۲: دریافت کپشن
+        if state.get("step") == "waiting_for_caption_book":
+            if str(user_id) != str(ADMIN_ID):
+                await message.answer("⛔ دسترسی نداری")
+                return
+            
+            caption = text
+            if caption == "❌ لغو":
+                del upload_state[user_id]
+                kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+                kb.add(
+                    KeyboardButton("⚡ آپلود سریع"),
+                    KeyboardButton("📤 آپلود جزوه"),
+                    KeyboardButton("🎥 آپلود ویدئو"),
+                    KeyboardButton("📖 آپلود کتاب"),
+                    KeyboardButton("🗑 حذف دبیر"),
+                    KeyboardButton("➕ اضافه کردن انتشارات"),
+                    KeyboardButton("📋 لیست فایل‌ها"),
+                    KeyboardButton("🗑 حذف فایل"),
+                    KeyboardButton("📊 آمار")
+                )
+                await message.answer("❌ لغو شد", reply_markup=kb)
+                return
+            
+            async for db in get_db():
+                archive = Archive(
+                    category="book",
+                    type="pdf",
+                    grade=state["grade"],
+                    major=state["major"],
+                    institute=state["publisher"],
+                    subject=state["subject"],
+                    teacher=None,
+                    book_name=state.get("book_name", "معمولی"),
+                    file_id=state["temp_file_id"],
+                    file_name=state["temp_file_name"],
+                    caption=caption,
+                    uploaded_by=user_id
+                )
+                db.add(archive)
+                await db.commit()
+            
+            publisher_name = state["publisher"]
+            grade = state["grade"]
+            major = state["major"]
+            subject = state["subject"]
+            file_name = state["temp_file_name"]
+            
+            del upload_state[user_id]
+            
+            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            kb.add(KeyboardButton("⚡ ادامه"))
+            kb.add(KeyboardButton("❌ لغو"))
+            
+            await message.answer(
+                f"✅ کتاب با موفقیت در دیتابیس ثبت شد!\n\n"
+                f"📖 {publisher_name} - {grade} - {major} - {subject}\n"
+                f"📄 {file_name}\n"
+                f"📝 کپشن: {caption}\n\n"
+                f"🔹 این کتاب در بخش **📖 کتاب کمک آموزشی** کاربران قابل مشاهده است.\n\n"
+                f"برای آپلود کتاب بعدی، روی '⚡ ادامه' بزن",
+                reply_markup=kb,
+                parse_mode="Markdown"
+            )
+            return
+
+    # ===================== آپلود جزوه/ویدیو (ادمین) =====================
+    if state.get("mode") != "admin_upload":
+        await message.answer("❌ شما در حالت دانلود هستید")
+        return
+    
+    # مرحله ۱: دریافت فایل
+    if state.get("step") == "waiting_for_file":
+        if message.document:
+            file_id = message.document.file_id
+            file_name = message.document.file_name or "unknown.pdf"
+            file_type = "pdf"
+            category_name = "جزوه"
+        elif message.video:
+            file_id = message.video.file_id
+            file_name = f"video_{message.video.file_id[:8]}.mp4"
+            file_type = "video"
+            category_name = "ویدیو"
+        else:
+            await message.answer("❌ لطفاً فقط فایل PDF یا ویدیو ارسال کن")
+            return
+
+        state["temp_file_id"] = file_id
+        state["temp_file_name"] = file_name
+        state["temp_file_type"] = file_type
+        state["step"] = "waiting_for_caption_file"
+
         await message.answer(
-            f"✅ فایل کتاب با موفقیت دریافت شد!\n\n"
-            f"📄 {state['temp_file_name']}\n\n"
-            f"📝 حالا کپشن کتاب رو وارد کن:",
+            f"✅ فایل {category_name} با موفقیت دریافت شد!\n\n"
+            f"📄 {file_name}\n\n"
+            f"📝 حالا کپشن فایل رو وارد کن:",
             reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(
                 KeyboardButton("❌ لغو")
             )
         )
         return
-
-    # ===================== آپلود کتاب (ادمین) - دریافت کپشن =====================
-    if state.get("mode") == "book_upload" and state.get("step") == "waiting_for_caption_book":
-        if str(user_id) != str(ADMIN_ID):
-            await message.answer("⛔ دسترسی نداری")
-            return
-        
-        caption = text
-        if caption == "❌ لغو":
-            del upload_state[user_id]
-            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            kb.add(
-                KeyboardButton("⚡ آپلود سریع"),
-                KeyboardButton("📤 آپلود جزوه"),
-                KeyboardButton("🎥 آپلود ویدئو"),
-                KeyboardButton("📖 آپلود کتاب"),
-                KeyboardButton("🗑 حذف دبیر"),
-                KeyboardButton("➕ اضافه کردن انتشارات"),
-                KeyboardButton("📋 لیست فایل‌ها"),
-                KeyboardButton("🗑 حذف فایل"),
-                KeyboardButton("📊 آمار")
-            )
-            await message.answer("❌ لغو شد", reply_markup=kb)
-            return
-        
-        async for db in get_db():
-            archive = Archive(
-                category="book",
-                type="pdf",
-                grade=state["grade"],
-                major=state["major"],
-                institute=state["publisher"],
-                subject=state["subject"],
-                teacher=None,
-                book_name=state.get("book_name", "معمولی"),
-                file_id=state["temp_file_id"],
-                file_name=state["temp_file_name"],
-                caption=caption,
-                uploaded_by=user_id
-            )
-            db.add(archive)
-            await db.commit()
-        
-        publisher_name = state["publisher"]
-        grade = state["grade"]
-        major = state["major"]
-        subject = state["subject"]
-        file_name = state["temp_file_name"]
-        
-        del upload_state[user_id]
-        
-        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        kb.add(KeyboardButton("⚡ ادامه"))
-        kb.add(KeyboardButton("❌ لغو"))
-        
-        await message.answer(
-            f"✅ کتاب با موفقیت در دیتابیس ثبت شد!\n\n"
-            f"📖 {publisher_name} - {grade} - {major} - {subject}\n"
-            f"📄 {file_name}\n"
-            f"📝 کپشن: {caption}\n\n"
-            f"🔹 این کتاب در بخش **📖 کتاب کمک آموزشی** کاربران قابل مشاهده است.\n\n"
-            f"برای آپلود کتاب بعدی، روی '⚡ ادامه' بزن",
-            reply_markup=kb,
-            parse_mode="Markdown"
-        )
-        return
-
-    # ===================== آپلود جزوه/ویدیو (ادمین) - دریافت فایل =====================
-    if state.get("mode") != "admin_upload":
-        await message.answer("❌ شما در حالت دانلود هستید")
-        return
-    if state.get("step") != "waiting_for_file":
-        await message.answer("❌ لطفاً اول دبیر رو انتخاب کن")
-        return
-
-    if message.document:
-        file_id = message.document.file_id
-        file_name = message.document.file_name or "unknown.pdf"
-        file_type = "pdf"
-        category_name = "جزوه"
-    elif message.video:
-        file_id = message.video.file_id
-        file_name = f"video_{message.video.file_id[:8]}.mp4"
-        file_type = "video"
-        category_name = "ویدیو"
-    else:
-        await message.answer("❌ لطفاً فقط فایل PDF یا ویدیو ارسال کن")
-        return
-
-    state["temp_file_id"] = file_id
-    state["temp_file_name"] = file_name
-    state["temp_file_type"] = file_type
-    state["step"] = "waiting_for_caption_file"
-
-    await message.answer(
-        f"✅ فایل {category_name} با موفقیت دریافت شد!\n\n"
-        f"📄 {file_name}\n\n"
-        f"📝 حالا کپشن فایل رو وارد کن:",
-        reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(
-            KeyboardButton("❌ لغو")
-        )
-    )
-    return
-
-    # ===================== آپلود جزوه/ویدیو (ادمین) - دریافت کپشن =====================
-    if state.get("mode") == "admin_upload" and state.get("step") == "waiting_for_caption_file":
+    
+    # مرحله ۲: دریافت کپشن
+    if state.get("step") == "waiting_for_caption_file":
         if str(user_id) != str(ADMIN_ID):
             await message.answer("⛔ دسترسی نداری")
             return
