@@ -10,8 +10,8 @@ from bot.keyboards.archive import (
     subject_keyboard,
     book_subject_keyboard,
     book_publisher_keyboard,
-    teacher_keyboard
 )
+from bot.data.teacher import teacher_keyboard
 from handlers.state import upload_state
 from aiogram.types import KeyboardButton
 
