@@ -1,4 +1,3 @@
-# handlers/start.py (کامل و نهایی)
 from aiogram import types
 from sqlalchemy import select, func
 from database.core import get_db
@@ -1032,65 +1031,65 @@ async def handle_file(message: types.Message):
     )
     return
 
-# ===================== دریافت کپشن جزوه/ویدیو =====================
-if state.get("mode") == "admin_upload" and state.get("step") == "waiting_for_caption_file":
-    if str(user_id) != str(ADMIN_ID):
-        await message.answer("⛔ دسترسی نداری")
-        return
-    
-    caption = text
-    if caption == "❌ لغو":
+    # ===================== دریافت کپشن جزوه/ویدیو (داخل handle_file) =====================
+    if state.get("mode") == "admin_upload" and state.get("step") == "waiting_for_caption_file":
+        if str(user_id) != str(ADMIN_ID):
+            await message.answer("⛔ دسترسی نداری")
+            return
+        
+        caption = text
+        if caption == "❌ لغو":
+            del upload_state[user_id]
+            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            kb.add(
+                KeyboardButton("⚡ آپلود سریع"),
+                KeyboardButton("📤 آپلود جزوه"),
+                KeyboardButton("🎥 آپلود ویدئو"),
+                KeyboardButton("📖 آپلود کتاب"),
+                KeyboardButton("🗑 حذف دبیر"),
+                KeyboardButton("➕ اضافه کردن انتشارات"),
+                KeyboardButton("📋 لیست فایل‌ها"),
+                KeyboardButton("🗑 حذف فایل"),
+                KeyboardButton("📊 آمار")
+            )
+            await message.answer("❌ لغو شد", reply_markup=kb)
+            return
+        
+        async for db in get_db():
+            archive = Archive(
+                category=state.get("category", "pdf"),
+                type=state["temp_file_type"],
+                grade=state["grade"],
+                major=state["major"],
+                institute=state["institute"],
+                subject=state["subject"],
+                teacher=state.get("teacher"),
+                file_id=state["temp_file_id"],
+                file_name=state["temp_file_name"],
+                caption=caption,
+                uploaded_by=user_id
+            )
+            db.add(archive)
+            await db.commit()
+        
+        grade = state["grade"]
+        major = state["major"]
+        institute = state["institute"]
+        subject = state["subject"]
+        teacher = state.get("teacher", "ندارد")
+        
         del upload_state[user_id]
+        
         kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        kb.add(
-            KeyboardButton("⚡ آپلود سریع"),
-            KeyboardButton("📤 آپلود جزوه"),
-            KeyboardButton("🎥 آپلود ویدئو"),
-            KeyboardButton("📖 آپلود کتاب"),
-            KeyboardButton("🗑 حذف دبیر"),
-            KeyboardButton("➕ اضافه کردن انتشارات"),
-            KeyboardButton("📋 لیست فایل‌ها"),
-            KeyboardButton("🗑 حذف فایل"),
-            KeyboardButton("📊 آمار")
+        kb.add(KeyboardButton("⚡ ادامه"))
+        kb.add(KeyboardButton("❌ لغو"))
+        
+        await message.answer(
+            f"✅ فایل با موفقیت ثبت شد!\n\n"
+            f"📚 {grade} - {major} - {institute} - {subject}\n"
+            f"👨‍🏫 دبیر: {teacher}\n"
+            f"📝 کپشن: {caption}\n\n"
+            f"برای آپلود فایل بعدی، روی '⚡ ادامه' بزن",
+            reply_markup=kb
         )
-        await message.answer("❌ لغو شد", reply_markup=kb)
         return
-    
-    async for db in get_db():
-        archive = Archive(
-            category=state.get("category", "pdf"),
-            type=state["temp_file_type"],
-            grade=state["grade"],
-            major=state["major"],
-            institute=state["institute"],
-            subject=state["subject"],
-            teacher=state.get("teacher"),
-            file_id=state["temp_file_id"],
-            file_name=state["temp_file_name"],
-            caption=caption,
-            uploaded_by=user_id
-        )
-        db.add(archive)
-        await db.commit()
-    
-    grade = state["grade"]
-    major = state["major"]
-    institute = state["institute"]
-    subject = state["subject"]
-    teacher = state.get("teacher", "ندارد")
-    
-    del upload_state[user_id]
-    
-    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add(KeyboardButton("⚡ ادامه"))
-    kb.add(KeyboardButton("❌ لغو"))
-    
-    await message.answer(
-        f"✅ فایل با موفقیت ثبت شد!\n\n"
-        f"📚 {grade} - {major} - {institute} - {subject}\n"
-        f"👨‍🏫 دبیر: {teacher}\n"
-        f"📝 کپشن: {caption}\n\n"
-        f"برای آپلود فایل بعدی، روی '⚡ ادامه' بزن",
-        reply_markup=kb
-    )
-    return
