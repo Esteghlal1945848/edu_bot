@@ -27,12 +27,11 @@ async def institute_keyboard():
 
     added = set()
     for ins in institutes:
-        if ins.name != "کلاسینو":  # کلاسینو حذف میشه
-            kb.add(KeyboardButton(ins.name))
-            added.add(ins.name)
+        kb.add(KeyboardButton(ins.name))
+        added.add(ins.name)
 
-    # پیشفرض‌هایی که توی دیتابیس نیستن (بجز کلاسینو)
-    defaults = ["ماز", "آلفا اسکول", "تایتان"]
+    # پیشفرض‌هایی که توی دیتابیس نیستن
+    defaults = ["ماز", "آلفا اسکول", "تایتان", "کلاسینو"]
     for name in defaults:
         if name not in added:
             kb.add(KeyboardButton(name))
@@ -167,6 +166,7 @@ async def teacher_keyboard(grade, major, institute, subject):
         "روانشناسی": "روان شناسی",
         "دینی": "دین و زندگی",
         "ادبیات": "فارسی",
+        "علوم و فنون ادبی": "علوم و فنون ادبی",
     }
 
     subject = subject_map.get(subject, subject)
