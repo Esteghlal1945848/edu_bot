@@ -1,5 +1,3 @@
-# bot/keyboards/archive.py (کامل و نهایی)
-
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from database.core import get_db
 from database.models import Teacher, Publisher
@@ -23,14 +21,21 @@ async def institute_keyboard():
 
     async for db in get_db():
         result = await db.execute(
-            select(Publisher).where(
-                Publisher.type == "institute"
-            )
+            select(Publisher).where(Publisher.type == "institute")
         )
         institutes = result.scalars().all()
 
+    added = set()
     for ins in institutes:
-        kb.add(KeyboardButton(ins.name))
+        if ins.name != "کلاسینو":  # کلاسینو حذف میشه
+            kb.add(KeyboardButton(ins.name))
+            added.add(ins.name)
+
+    # پیشفرض‌هایی که توی دیتابیس نیستن (بجز کلاسینو)
+    defaults = ["ماز", "آلفا اسکول", "تایتان"]
+    for name in defaults:
+        if name not in added:
+            kb.add(KeyboardButton(name))
 
     return kb
 
