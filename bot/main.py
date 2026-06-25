@@ -8,7 +8,7 @@ from aiogram.contrib.fsm_storage.redis import RedisStorage2
 from database.core import get_db, init_db
 from database.models import Archive
 
-from handlers.start import cmd_start, handle_buttons, handle_file
+from handlers.start import cmd_start, handle_buttons, handle_file, handle_callback
 from aiogram.types import KeyboardButton
 
 
@@ -56,6 +56,9 @@ async def main():
         handle_buttons,
         content_types=[types.ContentType.TEXT]
     )
+
+    # 4️⃣ هندلر Callback (برای صفحه‌بندی و ...)
+    dp.register_callback_query_handler(handle_callback)
 
     await on_startup(dp)
 
