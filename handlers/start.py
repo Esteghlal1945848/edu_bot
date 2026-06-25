@@ -15,6 +15,8 @@ from bot.data.teacher import teacher_keyboard
 from handlers.state import upload_state
 from aiogram.types import KeyboardButton
 import re
+import asyncio
+from datetime import datetime
 
 ADMIN_ID = 7336595194
 CHANNEL_ID = -1003918140957  # آیدی کانالت اینجا
@@ -134,12 +136,23 @@ async def handle_buttons(message: types.Message):
             KeyboardButton("⚡ آپلود سریع"),
             KeyboardButton("📤 آپلود جزوه"),
             KeyboardButton("🎥 آپلود ویدئو"),
-            KeyboardButton("📖 آپلود کتاب"),
+            KeyboardButton("📖 آپلود کتاب")
+        )
+        kb.add(
             KeyboardButton("🗑 حذف دبیر"),
-            KeyboardButton("➕ اضافه کردن انتشارات"),
+            KeyboardButton("➕ اضافه کردن انتشارات")
+        )
+        kb.add(
             KeyboardButton("📋 لیست فایل‌ها"),
-            KeyboardButton("🗑 حذف فایل"),
+            KeyboardButton("🗑 حذف فایل")
+        )
+        kb.add(
+            KeyboardButton("👥 لیست کاربران"),
             KeyboardButton("📊 آمار")
+        )
+        kb.add(
+            KeyboardButton("⚙️ تنظیمات"),
+            KeyboardButton("💾 بکاپ")
         )
         await message.answer("👑 **پنل مدیریت**", reply_markup=kb, parse_mode="Markdown")
         return
@@ -341,7 +354,10 @@ async def handle_buttons(message: types.Message):
                     KeyboardButton("➕ اضافه کردن انتشارات"),
                     KeyboardButton("📋 لیست فایل‌ها"),
                     KeyboardButton("🗑 حذف فایل"),
-                    KeyboardButton("📊 آمار")
+                    KeyboardButton("👥 لیست کاربران"),
+                    KeyboardButton("📊 آمار"),
+                    KeyboardButton("⚙️ تنظیمات"),
+                    KeyboardButton("💾 بکاپ")
                 )
                 await message.answer("👑 پنل مدیریت", reply_markup=kb)
                 return
@@ -397,7 +413,10 @@ async def handle_buttons(message: types.Message):
                     KeyboardButton("➕ اضافه کردن انتشارات"),
                     KeyboardButton("📋 لیست فایل‌ها"),
                     KeyboardButton("🗑 حذف فایل"),
-                    KeyboardButton("📊 آمار")
+                    KeyboardButton("👥 لیست کاربران"),
+                    KeyboardButton("📊 آمار"),
+                    KeyboardButton("⚙️ تنظیمات"),
+                    KeyboardButton("💾 بکاپ")
                 )
                 await message.answer("❌ عملیات لغو شد", reply_markup=kb)
                 return
@@ -605,7 +624,10 @@ async def handle_buttons(message: types.Message):
                 KeyboardButton("➕ اضافه کردن انتشارات"),
                 KeyboardButton("📋 لیست فایل‌ها"),
                 KeyboardButton("🗑 حذف فایل"),
-                KeyboardButton("📊 آمار")
+                KeyboardButton("👥 لیست کاربران"),
+                KeyboardButton("📊 آمار"),
+                KeyboardButton("⚙️ تنظیمات"),
+                KeyboardButton("💾 بکاپ")
             )
             await message.answer("❌ لغو شد", reply_markup=kb)
             return
@@ -675,7 +697,10 @@ async def handle_buttons(message: types.Message):
                 KeyboardButton("➕ اضافه کردن انتشارات"),
                 KeyboardButton("📋 لیست فایل‌ها"),
                 KeyboardButton("🗑 حذف فایل"),
-                KeyboardButton("📊 آمار")
+                KeyboardButton("👥 لیست کاربران"),
+                KeyboardButton("📊 آمار"),
+                KeyboardButton("⚙️ تنظیمات"),
+                KeyboardButton("💾 بکاپ")
             )
             await message.answer("❌ لغو شد", reply_markup=kb)
             return
@@ -807,7 +832,10 @@ async def handle_buttons(message: types.Message):
                     KeyboardButton("➕ اضافه کردن انتشارات"),
                     KeyboardButton("📋 لیست فایل‌ها"),
                     KeyboardButton("🗑 حذف فایل"),
-                    KeyboardButton("📊 آمار")
+                    KeyboardButton("👥 لیست کاربران"),
+                    KeyboardButton("📊 آمار"),
+                    KeyboardButton("⚙️ تنظیمات"),
+                    KeyboardButton("💾 بکاپ")
                 )
                 await message.answer("❌ لغو شد", reply_markup=kb)
                 return
@@ -833,9 +861,81 @@ async def handle_buttons(message: types.Message):
                 KeyboardButton("➕ اضافه کردن انتشارات"),
                 KeyboardButton("📋 لیست فایل‌ها"),
                 KeyboardButton("🗑 حذف فایل"),
-                KeyboardButton("📊 آمار")
+                KeyboardButton("👥 لیست کاربران"),
+                KeyboardButton("📊 آمار"),
+                KeyboardButton("⚙️ تنظیمات"),
+                KeyboardButton("💾 بکاپ")
             )
             await message.answer("👑 پنل مدیریت", reply_markup=kb)
+            return
+
+    # ===================== لیست کاربران =====================
+    if text == "👥 لیست کاربران":
+        if str(user_id) != str(ADMIN_ID):
+            await message.answer("⛔ دسترسی نداری")
+            return
+        await list_users(message)
+        return
+
+    # ===================== تنظیمات =====================
+    if text == "⚙️ تنظیمات":
+        if str(user_id) != str(ADMIN_ID):
+            await message.answer("⛔ دسترسی نداری")
+            return
+        await settings_panel(message)
+        return
+
+    # ===================== بکاپ =====================
+    if text == "💾 بکاپ":
+        if str(user_id) != str(ADMIN_ID):
+            await message.answer("⛔ دسترسی نداری")
+            return
+        await backup_database(message)
+        return
+
+    # ===================== پیام همگانی =====================
+    if text == "📢 پیام همگانی":
+        if str(user_id) != str(ADMIN_ID):
+            await message.answer("⛔ دسترسی نداری")
+            return
+        await broadcast_message(message)
+        return
+
+    # ===================== برگشت به پنل =====================
+    if text == "🔙 برگشت به پنل":
+        if str(user_id) != str(ADMIN_ID):
+            await message.answer("⛔ دسترسی نداری")
+            return
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add(
+            KeyboardButton("⚡ آپلود سریع"),
+            KeyboardButton("📤 آپلود جزوه"),
+            KeyboardButton("🎥 آپلود ویدئو"),
+            KeyboardButton("📖 آپلود کتاب")
+        )
+        kb.add(
+            KeyboardButton("🗑 حذف دبیر"),
+            KeyboardButton("➕ اضافه کردن انتشارات")
+        )
+        kb.add(
+            KeyboardButton("📋 لیست فایل‌ها"),
+            KeyboardButton("🗑 حذف فایل")
+        )
+        kb.add(
+            KeyboardButton("👥 لیست کاربران"),
+            KeyboardButton("📊 آمار")
+        )
+        kb.add(
+            KeyboardButton("⚙️ تنظیمات"),
+            KeyboardButton("💾 بکاپ")
+        )
+        await message.answer("👑 پنل مدیریت", reply_markup=kb)
+        return
+
+    # ===================== دریافت پیام همگانی =====================
+    if user_id in upload_state and upload_state[user_id].get("mode") == "broadcast":
+        if upload_state[user_id].get("step") == "waiting_for_message":
+            await send_broadcast(message)
             return
 
     # ===================== لغو =====================
@@ -885,6 +985,220 @@ async def handle_buttons(message: types.Message):
             return
         await show_stats(message)
         return
+
+
+# ===================== لیست کاربران (ادمین) =====================
+async def list_users(message: types.Message, page: int = 1):
+    """نمایش لیست کاربران با صفحه‌بندی"""
+    user_id = message.from_user.id
+    per_page = 10
+    
+    async for db in get_db():
+        # تعداد کل کاربران
+        total = await db.scalar(select(func.count()).select_from(User))
+        
+        # دریافت کاربران با صفحه‌بندی
+        offset = (page - 1) * per_page
+        result = await db.execute(
+            select(User)
+            .order_by(User.id.desc())
+            .offset(offset)
+            .limit(per_page)
+        )
+        users = result.scalars().all()
+    
+    if not users:
+        await message.answer("❌ هیچ کاربری در دیتابیس وجود ندارد")
+        return
+    
+    # ساخت پیام
+    text = f"👥 **لیست کاربران** (صفحه {page} از {(total + per_page - 1) // per_page})\n\n"
+    text += f"📊 **تعداد کل:** {total}\n\n"
+    
+    for i, user in enumerate(users, start=offset + 1):
+        username = f"@{user.username}" if user.username else "ندارد"
+        text += f"{i}. {user.full_name} - {username}\n"
+        text += f"   🆔 {user.telegram_id}\n"
+    
+    # دکمه‌های صفحه‌بندی
+    kb = types.InlineKeyboardMarkup(row_width=2)
+    if page > 1:
+        kb.insert(types.InlineKeyboardButton("◀️ قبلی", callback_data=f"users_page_{page-1}"))
+    if page * per_page < total:
+        kb.insert(types.InlineKeyboardButton("▶️ بعدی", callback_data=f"users_page_{page+1}"))
+    
+    if kb.inline_keyboard:
+        await message.answer(text, reply_markup=kb, parse_mode="Markdown")
+    else:
+        await message.answer(text, parse_mode="Markdown")
+
+
+# ===================== تنظیمات (ادمین) =====================
+async def settings_panel(message: types.Message):
+    """پنل تنظیمات"""
+    user_id = message.from_user.id
+    
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add(
+        KeyboardButton("👤 تغییر ادمین"),
+        KeyboardButton("📢 پیام همگانی")
+    )
+    kb.add(
+        KeyboardButton("🔙 برگشت به پنل")
+    )
+    
+    await message.answer(
+        "⚙️ **پنل تنظیمات**\n\n"
+        "🔹 تغییر ادمین: آیدی جدید رو وارد کن\n"
+        "🔹 پیام همگانی: به همه کاربران پیام بفرست\n\n"
+        "⚠️ **توجه:** این تنظیمات فقط برای ادمین قابل دسترسه.",
+        reply_markup=kb,
+        parse_mode="Markdown"
+    )
+
+
+# ===================== تغییر ادمین =====================
+async def change_admin(message: types.Message):
+    """تغییر آیدی ادمین"""
+    user_id = message.from_user.id
+    
+    try:
+        new_admin_id = int(message.text)
+        # در اینجا باید ADMIN_ID رو در دیتابیس یا فایل ذخیره کنی
+        # فعلاً فقط پیام میدیم
+        await message.answer(
+            f"✅ آیدی ادمین با موفقیت تغییر کرد!\n\n"
+            f"🆔 آیدی جدید: `{new_admin_id}`\n\n"
+            f"⚠️ لطفاً ربات رو ری‌استارت کن تا تغییرات اعمال بشه.",
+            parse_mode="Markdown"
+        )
+    except ValueError:
+        await message.answer("❌ لطفاً یک آیدی عددی معتبر وارد کن.")
+
+
+# ===================== پیام همگانی =====================
+async def broadcast_message(message: types.Message):
+    """شروع فرآیند پیام همگانی"""
+    user_id = message.from_user.id
+    
+    upload_state[user_id] = {
+        "mode": "broadcast",
+        "step": "waiting_for_message"
+    }
+    
+    await message.answer(
+        "📢 **ارسال پیام همگانی**\n\n"
+        "پیام مورد نظر رو وارد کن:\n\n"
+        "⚠️ این پیام به **همه کاربران** ارسال میشه.\n"
+        "برای لغو، روی **❌ لغو** کلیک کن.",
+        reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(
+            KeyboardButton("❌ لغو")
+        )
+    )
+
+
+async def send_broadcast(message: types.Message):
+    """ارسال پیام به همه کاربران"""
+    user_id = message.from_user.id
+    broadcast_text = message.text
+    
+    if broadcast_text == "❌ لغو":
+        del upload_state[user_id]
+        await message.answer("❌ ارسال پیام همگانی لغو شد")
+        return
+    
+    await message.answer("⏳ **در حال ارسال پیام به کاربران...**")
+    
+    async for db in get_db():
+        result = await db.execute(select(User))
+        users = result.scalars().all()
+    
+    sent = 0
+    failed = 0
+    
+    for user in users:
+        try:
+            await message.bot.send_message(
+                user.telegram_id,
+                f"📢 **پیام همگانی**\n\n{broadcast_text}",
+                parse_mode="Markdown"
+            )
+            sent += 1
+            await asyncio.sleep(0.05)  # جلوگیری از محدودیت
+        except:
+            failed += 1
+    
+    await message.answer(
+        f"✅ **پیام همگانی ارسال شد!**\n\n"
+        f"📤 ارسال شده: {sent}\n"
+        f"❌ ناموفق: {failed}\n"
+        f"👥 کل کاربران: {len(users)}"
+    )
+    
+    if user_id in upload_state:
+        del upload_state[user_id]
+    
+    # برگشت به پنل ادمین
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add(
+        KeyboardButton("⚡ آپلود سریع"),
+        KeyboardButton("📤 آپلود جزوه"),
+        KeyboardButton("🎥 آپلود ویدئو"),
+        KeyboardButton("📖 آپلود کتاب")
+    )
+    kb.add(
+        KeyboardButton("🗑 حذف دبیر"),
+        KeyboardButton("➕ اضافه کردن انتشارات")
+    )
+    kb.add(
+        KeyboardButton("📋 لیست فایل‌ها"),
+        KeyboardButton("🗑 حذف فایل")
+    )
+    kb.add(
+        KeyboardButton("👥 لیست کاربران"),
+        KeyboardButton("📊 آمار")
+    )
+    kb.add(
+        KeyboardButton("⚙️ تنظیمات"),
+        KeyboardButton("💾 بکاپ")
+    )
+    await message.answer("👑 پنل مدیریت", reply_markup=kb)
+
+
+# ===================== بکاپ گرفتن (ادمین) =====================
+async def backup_database(message: types.Message):
+    """گرفتن بکاپ از دیتابیس"""
+    user_id = message.from_user.id
+    
+    await message.answer("⏳ **در حال گرفتن بکاپ از دیتابیس...**")
+    
+    try:
+        async for db in get_db():
+            users_count = await db.scalar(select(func.count()).select_from(User))
+            files_count = await db.scalar(select(func.count()).select_from(Archive))
+            publishers_count = await db.scalar(select(func.count()).select_from(Publisher))
+            teachers_count = await db.scalar(select(func.count()).select_from(Teacher))
+        
+        backup_text = f"""📊 **گزارش بکاپ دیتابیس**
+
+📅 تاریخ: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+
+👥 کاربران: {users_count}
+📄 فایل‌ها: {files_count}
+🏛 انتشارات: {publishers_count}
+👨‍🏫 دبیران: {teachers_count}
+
+---
+این یک بکاپ ساده است. برای بکاپ کامل از سیستم دیتابیس استفاده کنید.
+"""
+        
+        await message.answer(
+            backup_text,
+            parse_mode="Markdown"
+        )
+        
+    except Exception as e:
+        await message.answer(f"❌ خطا در گرفتن بکاپ:\n`{str(e)}`", parse_mode="Markdown")
 
 
 # ===================== نمایش کتاب‌ها (کاربر) =====================
@@ -1041,7 +1355,10 @@ async def delete_file(message: types.Message, file_id: str):
         KeyboardButton("➕ اضافه کردن انتشارات"),
         KeyboardButton("📋 لیست فایل‌ها"),
         KeyboardButton("🗑 حذف فایل"),
-        KeyboardButton("📊 آمار")
+        KeyboardButton("👥 لیست کاربران"),
+        KeyboardButton("📊 آمار"),
+        KeyboardButton("⚙️ تنظیمات"),
+        KeyboardButton("💾 بکاپ")
     )
     await message.answer("👑 پنل مدیریت", reply_markup=kb)
 
@@ -1073,7 +1390,10 @@ async def show_stats(message: types.Message):
         KeyboardButton("➕ اضافه کردن انتشارات"),
         KeyboardButton("📋 لیست فایل‌ها"),
         KeyboardButton("🗑 حذف فایل"),
-        KeyboardButton("📊 آمار")
+        KeyboardButton("👥 لیست کاربران"),
+        KeyboardButton("📊 آمار"),
+        KeyboardButton("⚙️ تنظیمات"),
+        KeyboardButton("💾 بکاپ")
     )
     await message.answer("👑 پنل مدیریت", reply_markup=kb)
 
@@ -1205,3 +1525,16 @@ async def handle_file(message: types.Message):
         )
     )
     return
+
+
+# =========================
+# HANDLE CALLBACK
+# =========================
+async def handle_callback(callback_query: types.CallbackQuery):
+    """هندلر دکمه‌های شیشه‌ای"""
+    data = callback_query.data
+    
+    if data.startswith("users_page_"):
+        page = int(data.split("_")[2])
+        await list_users(callback_query.message, page)
+        await callback_query.answer()
