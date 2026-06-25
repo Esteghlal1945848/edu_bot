@@ -35,7 +35,6 @@ async def main_menu(user_id: int) -> types.ReplyKeyboardMarkup:
     )
     if str(user_id) == str(ADMIN_ID):
         kb.add(KeyboardButton("👑 پنل ادمین"))
-    kb.add(KeyboardButton("🔙 برگشت به منو"))
     return kb
 
 
@@ -191,12 +190,18 @@ async def handle_buttons(message: types.Message):
                 url="https://t.me/unbrokensociety2026"
             )
         )
+        back_kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        back_kb.add(KeyboardButton("🔙 برگشت به منو"))
         await message.answer(
             "📩 **ارتباط با ادمین**\n\n"
             "برای ارتباط مستقیم با ادمین، روی دکمه زیر کلیک کن و پیامت رو بفرست.\n\n"
             "📌 پاسخ شما در اسرع وقت داده میشه.",
-            reply_markup=kb,
+            reply_markup=back_kb,
             parse_mode="Markdown"
+        )
+        await message.answer(
+            "👇 روی دکمه زیر کلیک کن:",
+            reply_markup=kb
         )
         return
 
@@ -209,8 +214,9 @@ async def handle_buttons(message: types.Message):
         kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
         kb.row(KeyboardButton("دهم"), KeyboardButton("یازدهم"))
         kb.add(KeyboardButton("دوازدهم"))
+        kb.add(KeyboardButton("🔙 برگشت به منو"))
         await message.answer(
-            "کدوم پایه؟\n\n💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+            "کدوم پایه؟\n\n💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
             reply_markup=kb
         )
         return
@@ -221,6 +227,8 @@ async def handle_buttons(message: types.Message):
             await message.answer("⛔ دسترسی نداری")
             return
         upload_state[user_id] = {"mode": "fast_upload", "step": "waiting_for_file"}
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add(KeyboardButton("🔙 برگشت به منو"))
         await message.answer(
             "⚡ **حالت آپلود سریع فعال شد!**\n\n"
             "📤 فایل رو بفرست و توی کپشن این اطلاعات رو بنویس:\n\n"
@@ -230,7 +238,8 @@ async def handle_buttons(message: types.Message):
             "مثال برای کتاب:\n"
             "`کتاب | خیلی سبز | دهم | ریاضی | فیزیک | نردبام`\n\n"
             "⚠️ بین اطلاعات فقط `|` بذار\n\n"
-            "💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+            "💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+            reply_markup=kb,
             parse_mode="Markdown"
         )
         return
@@ -241,6 +250,8 @@ async def handle_buttons(message: types.Message):
             await message.answer("⛔ دسترسی نداری")
             return
         upload_state[user_id] = {"mode": "book_upload", "category": "book", "type": "pdf", "step": "publisher"}
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add(KeyboardButton("🔙 برگشت به منو"))
         await message.answer(
             "📖 **آپلود کتاب کمک آموزشی**\n\nناشر رو انتخاب کن:",
             reply_markup=await publisher_keyboard()
@@ -256,8 +267,9 @@ async def handle_buttons(message: types.Message):
         kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
         kb.row(KeyboardButton("دهم"), KeyboardButton("یازدهم"))
         kb.add(KeyboardButton("دوازدهم"))
+        kb.add(KeyboardButton("🔙 برگشت به منو"))
         await message.answer(
-            "پایه را انتخاب کن:\n\n💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+            "پایه را انتخاب کن:\n\n💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
             reply_markup=kb
         )
         return
@@ -271,8 +283,9 @@ async def handle_buttons(message: types.Message):
         kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
         kb.row(KeyboardButton("دهم"), KeyboardButton("یازدهم"))
         kb.add(KeyboardButton("دوازدهم"))
+        kb.add(KeyboardButton("🔙 برگشت به منو"))
         await message.answer(
-            "پایه را انتخاب کن:\n\n💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+            "پایه را انتخاب کن:\n\n💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
             reply_markup=kb
         )
         return
@@ -285,8 +298,9 @@ async def handle_buttons(message: types.Message):
         kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
         kb.row(KeyboardButton("دهم"), KeyboardButton("یازدهم"))
         kb.add(KeyboardButton("دوازدهم"))
+        kb.add(KeyboardButton("🔙 برگشت به منو"))
         await message.answer(
-            "📖 کدوم پایه؟\n\n💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+            "📖 کدوم پایه؟\n\n💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
             reply_markup=kb
         )
         return
@@ -297,11 +311,14 @@ async def handle_buttons(message: types.Message):
             await message.answer("⛔ دسترسی نداری")
             return
         upload_state[user_id] = {"mode": "add_publisher", "step": "ask_name"}
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add(KeyboardButton("🔙 برگشت به منو"))
         await message.answer(
             "📝 **اضافه کردن انتشارات جدید**\n\n"
             "نام انتشارات رو وارد کن:\n"
             "(مثال: ماجرای ۲۰)\n\n"
-            "💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن."
+            "💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+            reply_markup=kb
         )
         return
 
@@ -313,10 +330,11 @@ async def handle_buttons(message: types.Message):
             kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
             kb.add("موسسه آموزشی")
             kb.add("ناشر کتاب")
+            kb.add("🔙 برگشت به منو")
             await message.answer(
                 f"نوع انتشارات رو انتخاب کن:\n\n"
                 f"📌 {name}\n\n"
-                f"💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+                f"💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
                 reply_markup=kb
             )
             return
@@ -330,10 +348,11 @@ async def handle_buttons(message: types.Message):
             kb.add("دهم")
             kb.add("یازدهم")
             kb.add("دوازدهم")
+            kb.add("🔙 برگشت به منو")
             await message.answer(
                 f"📌 **{upload_state[user_id]['name']}**\n\n"
                 "پایه را انتخاب کن:\n\n"
-                f"💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+                f"💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
                 reply_markup=kb
             )
             return
@@ -343,11 +362,12 @@ async def handle_buttons(message: types.Message):
             kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
             kb.add("ریاضی")
             kb.add("تجربی")
+            kb.add("🔙 برگشت به منو")
             await message.answer(
                 f"📌 **{upload_state[user_id]['name']}**\n"
                 f"📚 پایه: {text}\n\n"
                 "رشته را انتخاب کن:\n\n"
-                f"💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+                f"💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
                 reply_markup=kb
             )
             return
@@ -355,6 +375,9 @@ async def handle_buttons(message: types.Message):
             upload_state[user_id]["current_major"] = text
             upload_state[user_id]["step"] = "ask_subject"
             upload_state[user_id]["temp_subjects"] = []
+            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            kb.add(KeyboardButton("✅ ثبت دروس"))
+            kb.add(KeyboardButton("🔙 برگشت به منو"))
             await message.answer(
                 f"📌 **{upload_state[user_id]['name']}**\n"
                 f"📚 پایه: {upload_state[user_id]['current_grade']}\n"
@@ -366,11 +389,8 @@ async def handle_buttons(message: types.Message):
                 "شیمی\n"
                 "ریاضی\n\n"
                 "⚠️ وقتی تموم شد، روی دکمه **✅ ثبت دروس** بزن.\n\n"
-                f"💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
-                reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(
-                    KeyboardButton("✅ ثبت دروس"),
-                    KeyboardButton("🔙 برگشت به منو")
-                )
+                f"💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+                reply_markup=kb
             )
             return
         if upload_state[user_id].get("step") == "ask_subject":
@@ -402,23 +422,8 @@ async def handle_buttons(message: types.Message):
                     ])
                 )
                 del upload_state[user_id]
-                kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-                kb.add(
-                    KeyboardButton("⚡ آپلود سریع"),
-                    KeyboardButton("📤 آپلود جزوه"),
-                    KeyboardButton("🎥 آپلود ویدئو"),
-                    KeyboardButton("📖 آپلود کتاب"),
-                    KeyboardButton("🗑 حذف دبیر"),
-                    KeyboardButton("➕ اضافه کردن انتشارات"),
-                    KeyboardButton("📋 لیست فایل‌ها"),
-                    KeyboardButton("🗑 حذف فایل"),
-                    KeyboardButton("👥 لیست کاربران"),
-                    KeyboardButton("📊 آمار"),
-                    KeyboardButton("⚙️ تنظیمات"),
-                    KeyboardButton("💾 بکاپ"),
-                    KeyboardButton("🔙 برگشت به منو")
-                )
-                await message.answer("👑 پنل مدیریت", reply_markup=kb)
+                kb = await main_menu(user_id)
+                await message.answer("به منوی اصلی برگشتی", reply_markup=kb)
                 return
             elif text == "✅ ثبت دروس":
                 subjects_list = upload_state[user_id].get("temp_subjects", [])
@@ -448,7 +453,7 @@ async def handle_buttons(message: types.Message):
                     f"✅ دروس {current_major} برای پایه {current_grade} ثبت شد.\n\n"
                     f"{display_text}\n"
                     "برای ادامه، پایه دیگه رو انتخاب کن یا روی **✅ ثبت نهایی** بزن.\n\n"
-                    f"💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+                    f"💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
                     reply_markup=kb
                 )
                 return
@@ -485,6 +490,7 @@ async def handle_buttons(message: types.Message):
             kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
             kb.add(KeyboardButton(f"رشته:{text}|ریاضی"))
             kb.add(KeyboardButton(f"رشته:{text}|تجربی"))
+            kb.add(KeyboardButton("🔙 برگشت به منو"))
             await message.answer("📖 رشته را انتخاب کن:", reply_markup=kb)
             return
         if user_id in upload_state and upload_state[user_id].get("mode") == "book_upload":
@@ -494,6 +500,7 @@ async def handle_buttons(message: types.Message):
             kb.add(KeyboardButton(f"رشته:{text}|ریاضی"))
             kb.add(KeyboardButton(f"رشته:{text}|تجربی"))
             kb.add(KeyboardButton(f"رشته:{text}|انسانی"))
+            kb.add(KeyboardButton("🔙 برگشت به منو"))
             await message.answer("رشته را انتخاب کن:", reply_markup=kb)
             return
         if user_id in upload_state and upload_state[user_id].get("mode") == "admin_upload":
@@ -503,6 +510,7 @@ async def handle_buttons(message: types.Message):
             kb.add(KeyboardButton(f"رشته:{text}|ریاضی"))
             kb.add(KeyboardButton(f"رشته:{text}|تجربی"))
             kb.add(KeyboardButton(f"رشته:{text}|انسانی"))
+            kb.add(KeyboardButton("🔙 برگشت به منو"))
             await message.answer("رشته را انتخاب کن:", reply_markup=kb)
             return
         if user_id in upload_state and upload_state[user_id].get("mode") == "user_download" and upload_state[user_id].get("step") == "grade":
@@ -512,6 +520,7 @@ async def handle_buttons(message: types.Message):
             kb.add(KeyboardButton(f"رشته:{text}|ریاضی"))
             kb.add(KeyboardButton(f"رشته:{text}|تجربی"))
             kb.add(KeyboardButton(f"رشته:{text}|انسانی"))
+            kb.add(KeyboardButton("🔙 برگشت به منو"))
             await message.answer("رشته را انتخاب کن:", reply_markup=kb)
             return
 
@@ -522,6 +531,7 @@ async def handle_buttons(message: types.Message):
         kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
         kb.row(KeyboardButton("دهم"), KeyboardButton("یازدهم"))
         kb.add(KeyboardButton("دوازدهم"))
+        kb.add(KeyboardButton("🔙 برگشت به منو"))
         await message.answer("پایه را انتخاب کن:", reply_markup=kb)
         return
 
@@ -536,6 +546,8 @@ async def handle_buttons(message: types.Message):
             state["grade"] = grade
             state["major"] = major
             state["step"] = "book_publisher"
+            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            kb.add(KeyboardButton("🔙 برگشت به منو"))
             await message.answer(
                 "📖 ناشر مورد نظر رو انتخاب کن:",
                 reply_markup=await book_publisher_keyboard(grade, major)
@@ -545,6 +557,8 @@ async def handle_buttons(message: types.Message):
             state["grade"] = grade
             state["major"] = major
             state["step"] = "book_subject"
+            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            kb.add(KeyboardButton("🔙 برگشت به منو"))
             await message.answer(
                 "📖 درس مورد نظر رو انتخاب کن:",
                 reply_markup=await book_subject_keyboard(state["publisher"], grade, major)
@@ -554,12 +568,16 @@ async def handle_buttons(message: types.Message):
             state["grade"] = grade
             state["major"] = major
             state["step"] = "institute"
+            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            kb.add(KeyboardButton("🔙 برگشت به منو"))
             await message.answer("🏛 موسسه را انتخاب کن", reply_markup=await institute_keyboard())
             return
         if state.get("mode") == "user_download" and state.get("category") != "book":
             state["grade"] = grade
             state["major"] = major
             state["step"] = "institute"
+            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            kb.add(KeyboardButton("🔙 برگشت به منو"))
             await message.answer("🏛 موسسه را انتخاب کن", reply_markup=await institute_keyboard())
             return
 
@@ -568,6 +586,8 @@ async def handle_buttons(message: types.Message):
         state = upload_state[user_id]
         state["publisher"] = text
         state["step"] = "book_subject_download"
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add(KeyboardButton("🔙 برگشت به منو"))
         await message.answer(
             "📖 درس مورد نظر رو انتخاب کن:",
             reply_markup=await book_subject_keyboard(text, state["grade"], state["major"])
@@ -588,12 +608,13 @@ async def handle_buttons(message: types.Message):
         state["step"] = "waiting_for_file"
         kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
         kb.add(KeyboardButton("❌ لغو"))
+        kb.add(KeyboardButton("🔙 برگشت به منو"))
         await message.answer(
             f"✅ اطلاعات ثبت شد:\n"
             f"📖 {state['publisher']} - {state['grade']} - {state['major']} - {state['subject']}\n\n"
             f"📤 حالا فایل رو ارسال کن (PDF)\n\n"
             f"⚠️ بعد از ارسال فایل، کپشن رو وارد کن.\n\n"
-            f"💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+            f"💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
             reply_markup=kb
         )
         return
@@ -607,8 +628,9 @@ async def handle_buttons(message: types.Message):
         from bot.keyboards.archive import subjects
         for s in subjects.get(state["major"], []):
             kb.add(KeyboardButton(s))
+        kb.add(KeyboardButton("🔙 برگشت به منو"))
         await message.answer(
-            "📚 درس را انتخاب کن:\n\n💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+            "📚 درس را انتخاب کن:\n\n💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
             reply_markup=kb
         )
         return
@@ -621,11 +643,15 @@ async def handle_buttons(message: types.Message):
         if state.get("mode") in ["admin_upload", "user_download"]:
             kb = await teacher_keyboard(state["grade"], state["major"], state["institute"], text)
             if kb:
+                kb.add(KeyboardButton("🔙 برگشت به منو"))
                 await message.answer("👨‍🏫 دبیر را انتخاب کن:", reply_markup=kb)
             else:
+                kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+                kb.add(KeyboardButton("🔙 برگشت به منو"))
                 await message.answer(
                     "❌ دبیری برای این درس پیدا نشد.\n\n"
-                    "💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن."
+                    "💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+                    reply_markup=kb
                 )
             return
 
@@ -637,10 +663,11 @@ async def handle_buttons(message: types.Message):
             state["step"] = "waiting_for_file"
             kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
             kb.add(KeyboardButton("❌ لغو"))
+            kb.add(KeyboardButton("🔙 برگشت به منو"))
             await message.answer(
                 f"✅ دبیر {text} انتخاب شد.\n\n📤 حالا فایل رو ارسال کن (PDF یا ویدیو)\n\n"
                 f"⚠️ بعد از ارسال فایل، کپشن رو وارد کن.\n\n"
-                f"💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+                f"💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
                 reply_markup=kb
             )
             return
@@ -658,9 +685,10 @@ async def handle_buttons(message: types.Message):
             state["step"] = "waiting_for_file"
             kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
             kb.add(KeyboardButton("❌ لغو"))
+            kb.add(KeyboardButton("🔙 برگشت به منو"))
             await message.answer(
                 "📤 فایل بعدی رو بفرست.\n\n"
-                "💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+                "💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
                 reply_markup=kb
             )
         return
@@ -710,6 +738,7 @@ async def handle_buttons(message: types.Message):
         kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
         kb.add(KeyboardButton("⚡ ادامه"))
         kb.add(KeyboardButton("❌ لغو"))
+        kb.add(KeyboardButton("🔙 برگشت به منو"))
         
         await message.answer(
             f"✅ {category_name} با موفقیت در دیتابیس ثبت شد!\n\n"
@@ -719,7 +748,7 @@ async def handle_buttons(message: types.Message):
             f"📝 کپشن: {caption}\n\n"
             f"🔹 این {category_name} در بخش **{'📚 جزوه' if category_name == 'جزوه' else '🎥 ویدئو'}** کاربران قابل مشاهده است.\n\n"
             f"برای آپلود {category_name} بعدی، روی '⚡ ادامه' بزن.\n\n"
-            f"💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+            f"💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
             reply_markup=kb,
             parse_mode="Markdown"
         )
@@ -769,6 +798,7 @@ async def handle_buttons(message: types.Message):
         kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
         kb.add(KeyboardButton("⚡ ادامه"))
         kb.add(KeyboardButton("❌ لغو"))
+        kb.add(KeyboardButton("🔙 برگشت به منو"))
         
         await message.answer(
             f"✅ کتاب با موفقیت در دیتابیس ثبت شد!\n\n"
@@ -777,7 +807,7 @@ async def handle_buttons(message: types.Message):
             f"📝 کپشن: {caption}\n\n"
             f"🔹 این کتاب در بخش **📖 کتاب کمک آموزشی** کاربران قابل مشاهده است.\n\n"
             f"برای آپلود کتاب بعدی، روی '⚡ ادامه' بزن.\n\n"
-            f"💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+            f"💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
             reply_markup=kb,
             parse_mode="Markdown"
         )
@@ -789,9 +819,11 @@ async def handle_buttons(message: types.Message):
             await message.answer("⛔ دسترسی نداری")
             return
         upload_state[user_id] = {"mode": "delete_teacher", "step": "ask_institute"}
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add(KeyboardButton("🔙 برگشت به منو"))
         await message.answer(
             "🗑 **حذف دبیر**\n\nموسسه رو انتخاب کن:\n\n"
-            "💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+            "💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
             reply_markup=await institute_keyboard()
         )
         return
@@ -804,9 +836,10 @@ async def handle_buttons(message: types.Message):
             kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
             kb.add("دهم", "یازدهم", "دوازدهم")
             kb.add("❌ لغو")
+            kb.add("🔙 برگشت به منو")
             await message.answer(
                 f"🏛 موسسه: {text}\n\nپایه رو انتخاب کن:\n\n"
-                f"💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+                f"💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
                 reply_markup=kb
             )
             return
@@ -816,10 +849,11 @@ async def handle_buttons(message: types.Message):
             kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
             kb.add("ریاضی", "تجربی", "انسانی")
             kb.add("❌ لغو")
+            kb.add("🔙 برگشت به منو")
             await message.answer(
                 f"🏛 موسسه: {state['institute']}\n"
                 f"📚 پایه: {text}\n\nرشته رو انتخاب کن:\n\n"
-                f"💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+                f"💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
                 reply_markup=kb
             )
             return
@@ -842,9 +876,12 @@ async def handle_buttons(message: types.Message):
                 )
                 teachers = result.scalars().all()
             if not teachers:
+                kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+                kb.add(KeyboardButton("🔙 برگشت به منو"))
                 await message.answer(
                     "❌ دبیری برای این انتخاب‌ها پیدا نشد.\n\n"
-                    "💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن."
+                    "💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+                    reply_markup=kb
                 )
                 del upload_state[user_id]
                 return
@@ -852,13 +889,14 @@ async def handle_buttons(message: types.Message):
             for t in teachers:
                 kb.add(KeyboardButton(t.name))
             kb.add("❌ لغو")
+            kb.add("🔙 برگشت به منو")
             state["teachers_list"] = {t.name: t.id for t in teachers}
             await message.answer(
                 f"🏛 موسسه: {state['institute']}\n"
                 f"📚 پایه: {state['grade']}\n"
                 f"🎓 رشته: {text}\n\n"
                 "دبیر مورد نظر برای حذف رو انتخاب کن:\n\n"
-                f"💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+                f"💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
                 reply_markup=kb
             )
             return
@@ -966,9 +1004,12 @@ async def handle_buttons(message: types.Message):
             await message.answer("⛔ دسترسی نداری")
             return
         upload_state[user_id] = {"mode": "admin_delete", "step": "waiting_for_file_id"}
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add(KeyboardButton("🔙 برگشت به منو"))
         await message.answer(
             "🗑 آیدی فایل مورد نظر برای حذف رو وارد کن:\n\nمثلاً: `file_123456789`\n\n"
-            "💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+            "💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+            reply_markup=kb,
             parse_mode="Markdown"
         )
         return
@@ -982,44 +1023,56 @@ async def handle_buttons(message: types.Message):
         return
 
 
-# ===================== لیست کاربران (ادمین) =====================
+# ===================== لیست کاربران (ادمین) - اصلاح شده =====================
 async def list_users(message: types.Message, page: int = 1):
     user_id = message.from_user.id
     per_page = 10
     
-    async for db in get_db():
-        total = await db.scalar(select(func.count()).select_from(User))
-        offset = (page - 1) * per_page
-        result = await db.execute(
-            select(User)
-            .order_by(User.id.desc())
-            .offset(offset)
-            .limit(per_page)
-        )
-        users = result.scalars().all()
-    
-    if not users:
-        await message.answer("❌ هیچ کاربری در دیتابیس وجود ندارد")
-        return
-    
-    text = f"👥 **لیست کاربران** (صفحه {page} از {(total + per_page - 1) // per_page})\n\n"
-    text += f"📊 **تعداد کل:** {total}\n\n"
-    
-    for i, user in enumerate(users, start=offset + 1):
-        username = f"@{user.username}" if user.username else "ندارد"
-        text += f"{i}. {user.full_name} - {username}\n"
-        text += f"   🆔 {user.telegram_id}\n"
-    
-    kb = types.InlineKeyboardMarkup(row_width=2)
-    if page > 1:
-        kb.insert(types.InlineKeyboardButton("◀️ قبلی", callback_data=f"users_page_{page-1}"))
-    if page * per_page < total:
-        kb.insert(types.InlineKeyboardButton("▶️ بعدی", callback_data=f"users_page_{page+1}"))
-    
-    if kb.inline_keyboard:
-        await message.answer(text, reply_markup=kb, parse_mode="Markdown")
-    else:
-        await message.answer(text, parse_mode="Markdown")
+    try:
+        async for db in get_db():
+            total = await db.scalar(select(func.count()).select_from(User))
+            offset = (page - 1) * per_page
+            result = await db.execute(
+                select(User)
+                .order_by(User.id.desc())
+                .offset(offset)
+                .limit(per_page)
+            )
+            users = result.scalars().all()
+        
+        if not users:
+            await message.answer("❌ هیچ کاربری در دیتابیس وجود ندارد")
+            return
+        
+        text = f"👥 **لیست کاربران** (صفحه {page} از {(total + per_page - 1) // per_page})\n\n"
+        text += f"📊 **تعداد کل:** {total}\n\n"
+        
+        for i, user in enumerate(users, start=offset + 1):
+            username = f"@{user.username}" if user.username else "ندارد"
+            text += f"{i}. {user.full_name} - {username}\n"
+            text += f"   🆔 {user.telegram_id}\n"
+        
+        # دکمه‌های صفحه‌بندی با InlineKeyboard
+        kb = types.InlineKeyboardMarkup(row_width=2)
+        if page > 1:
+            kb.insert(types.InlineKeyboardButton("◀️ قبلی", callback_data=f"users_page_{page-1}"))
+        if page * per_page < total:
+            kb.insert(types.InlineKeyboardButton("▶️ بعدی", callback_data=f"users_page_{page+1}"))
+        
+        # دکمه برگشت به منو
+        back_kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        back_kb.add(KeyboardButton("🔙 برگشت به منو"))
+        
+        await message.answer(text, reply_markup=back_kb, parse_mode="Markdown")
+        
+        if kb.inline_keyboard:
+            await message.answer("📌 برای رفتن به صفحه بعد/قبل از دکمه‌های زیر استفاده کن:", reply_markup=kb)
+            
+    except Exception as e:
+        await message.answer(f"❌ خطا در دریافت لیست کاربران:\n`{str(e)}`", parse_mode="Markdown")
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add(KeyboardButton("🔙 برگشت به منو"))
+        await message.answer("به منوی اصلی برگشتی", reply_markup=kb)
 
 
 # ===================== تنظیمات (ادمین) =====================
@@ -1040,7 +1093,7 @@ async def settings_panel(message: types.Message):
         "🔹 تغییر ادمین: آیدی جدید رو وارد کن\n"
         "🔹 پیام همگانی: به همه کاربران پیام بفرست\n\n"
         "⚠️ **توجه:** این تنظیمات فقط برای ادمین قابل دسترسه.\n\n"
-        "💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+        "💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -1073,12 +1126,13 @@ async def broadcast_message(message: types.Message):
     
     kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
     kb.add(KeyboardButton("❌ لغو"))
+    kb.add(KeyboardButton("🔙 برگشت به منو"))
     
     await message.answer(
         "📢 **ارسال پیام همگانی**\n\n"
         "پیام مورد نظر رو وارد کن:\n\n"
         "⚠️ این پیام به **همه کاربران** ارسال میشه.\n\n"
-        "💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+        "💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
         reply_markup=kb
     )
 
@@ -1095,60 +1149,41 @@ async def send_broadcast(message: types.Message):
     
     await message.answer("⏳ **در حال ارسال پیام به کاربران...**")
     
-    async for db in get_db():
-        result = await db.execute(select(User))
-        users = result.scalars().all()
-    
-    sent = 0
-    failed = 0
-    
-    for user in users:
-        try:
-            await message.bot.send_message(
-                user.telegram_id,
-                f"📢 **پیام همگانی**\n\n{broadcast_text}",
-                parse_mode="Markdown"
-            )
-            sent += 1
-            await asyncio.sleep(0.05)
-        except:
-            failed += 1
-    
-    await message.answer(
-        f"✅ **پیام همگانی ارسال شد!**\n\n"
-        f"📤 ارسال شده: {sent}\n"
-        f"❌ ناموفق: {failed}\n"
-        f"👥 کل کاربران: {len(users)}"
-    )
+    try:
+        async for db in get_db():
+            result = await db.execute(select(User))
+            users = result.scalars().all()
+        
+        sent = 0
+        failed = 0
+        
+        for user in users:
+            try:
+                await message.bot.send_message(
+                    user.telegram_id,
+                    f"📢 **پیام همگانی**\n\n{broadcast_text}",
+                    parse_mode="Markdown"
+                )
+                sent += 1
+                await asyncio.sleep(0.05)
+            except:
+                failed += 1
+        
+        await message.answer(
+            f"✅ **پیام همگانی ارسال شد!**\n\n"
+            f"📤 ارسال شده: {sent}\n"
+            f"❌ ناموفق: {failed}\n"
+            f"👥 کل کاربران: {len(users)}"
+        )
+        
+    except Exception as e:
+        await message.answer(f"❌ خطا در ارسال پیام همگانی:\n`{str(e)}`", parse_mode="Markdown")
     
     if user_id in upload_state:
         del upload_state[user_id]
     
-    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add(
-        KeyboardButton("⚡ آپلود سریع"),
-        KeyboardButton("📤 آپلود جزوه"),
-        KeyboardButton("🎥 آپلود ویدئو"),
-        KeyboardButton("📖 آپلود کتاب")
-    )
-    kb.add(
-        KeyboardButton("🗑 حذف دبیر"),
-        KeyboardButton("➕ اضافه کردن انتشارات")
-    )
-    kb.add(
-        KeyboardButton("📋 لیست فایل‌ها"),
-        KeyboardButton("🗑 حذف فایل")
-    )
-    kb.add(
-        KeyboardButton("👥 لیست کاربران"),
-        KeyboardButton("📊 آمار")
-    )
-    kb.add(
-        KeyboardButton("⚙️ تنظیمات"),
-        KeyboardButton("💾 بکاپ")
-    )
-    kb.add(KeyboardButton("🔙 برگشت به منو"))
-    await message.answer("👑 پنل مدیریت", reply_markup=kb)
+    kb = await main_menu(user_id)
+    await message.answer("به منوی اصلی برگشتی", reply_markup=kb)
 
 
 # ===================== بکاپ گرفتن (ادمین) =====================
@@ -1184,6 +1219,9 @@ async def backup_database(message: types.Message):
         
     except Exception as e:
         await message.answer(f"❌ خطا در گرفتن بکاپ:\n`{str(e)}`", parse_mode="Markdown")
+    
+    kb = await main_menu(user_id)
+    await message.answer("به منوی اصلی برگشتی", reply_markup=kb)
 
 
 # ===================== نمایش کتاب‌ها (کاربر) =====================
@@ -1200,15 +1238,15 @@ async def show_book_archives(message: types.Message, state: dict):
         result = await db.execute(query)
         archives = result.scalars().all()
     if not archives:
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add(KeyboardButton("🔙 برگشت به منو"))
         await message.answer(
             f"❌ هیچ کتابی برای این انتخاب‌ها پیدا نشد\n\n"
-            f"📖 {state['publisher']} - {state['grade']} - {state['major']} - {state['subject']}\n\n"
-            f"💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن."
+            f"📖 {state['publisher']} - {state['grade']} - {state['major']} - {state['subject']}",
+            reply_markup=kb
         )
-        kb = await main_menu(user_id)
         if user_id in upload_state:
             del upload_state[user_id]
-        await message.answer("به منوی اصلی برگشتی", reply_markup=kb)
         return
     for archive in archives:
         caption = f"📖 {archive.file_name}\n"
@@ -1239,16 +1277,16 @@ async def show_archives(message: types.Message, state: dict):
         result = await db.execute(query)
         archives = result.scalars().all()
     if not archives:
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add(KeyboardButton("🔙 برگشت به منو"))
         await message.answer(
             f"❌ هیچ فایلی پیدا نشد\n\n"
             f"📚 درس: {state['subject']}\n"
-            f"👨‍🏫 دبیر: {state.get('teacher', 'نامشخص')}\n\n"
-            f"💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن."
+            f"👨‍🏫 دبیر: {state.get('teacher', 'نامشخص')}",
+            reply_markup=kb
         )
-        kb = await main_menu(user_id)
         if user_id in upload_state:
             del upload_state[user_id]
-        await message.answer("به منوی اصلی برگشتی", reply_markup=kb)
         return
     for archive in archives:
         caption = f"📄 {archive.file_name}\n"
@@ -1308,7 +1346,7 @@ async def delete_file(message: types.Message, file_id: str):
     if user_id in upload_state:
         del upload_state[user_id]
     kb = await main_menu(user_id)
-    await message.answer("👑 پنل مدیریت", reply_markup=kb)
+    await message.answer("به منوی اصلی برگشتی", reply_markup=kb)
 
 
 # ===================== آمار (ادمین) =====================
@@ -1328,23 +1366,8 @@ async def show_stats(message: types.Message):
         f"📖 کتاب: {book_count}",
         parse_mode="Markdown"
     )
-    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add(
-        KeyboardButton("⚡ آپلود سریع"),
-        KeyboardButton("📤 آپلود جزوه"),
-        KeyboardButton("🎥 آپلود ویدئو"),
-        KeyboardButton("📖 آپلود کتاب"),
-        KeyboardButton("🗑 حذف دبیر"),
-        KeyboardButton("➕ اضافه کردن انتشارات"),
-        KeyboardButton("📋 لیست فایل‌ها"),
-        KeyboardButton("🗑 حذف فایل"),
-        KeyboardButton("👥 لیست کاربران"),
-        KeyboardButton("📊 آمار"),
-        KeyboardButton("⚙️ تنظیمات"),
-        KeyboardButton("💾 بکاپ"),
-        KeyboardButton("🔙 برگشت به منو")
-    )
-    await message.answer("👑 پنل مدیریت", reply_markup=kb)
+    kb = await main_menu(user_id)
+    await message.answer("به منوی اصلی برگشتی", reply_markup=kb)
 
 
 # =========================
@@ -1405,9 +1428,10 @@ async def handle_file(message: types.Message):
         kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
         kb.add(KeyboardButton("⚡ ادامه"))
         kb.add(KeyboardButton("❌ لغو"))
+        kb.add(KeyboardButton("🔙 برگشت به منو"))
         await message.answer(
             f"✅ فایل با موفقیت ثبت شد!\n📚 {institute} - {grade} - {major} - {subject}\n\n"
-            f"💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+            f"💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
             reply_markup=kb
         )
         return
@@ -1428,12 +1452,13 @@ async def handle_file(message: types.Message):
             
             kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
             kb.add(KeyboardButton("❌ لغو"))
+            kb.add(KeyboardButton("🔙 برگشت به منو"))
             
             await message.answer(
                 f"✅ فایل کتاب با موفقیت دریافت شد!\n\n"
                 f"📄 {state['temp_file_name']}\n\n"
                 f"📝 حالا کپشن کتاب رو وارد کن:\n\n"
-                f"💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+                f"💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
                 reply_markup=kb
             )
             return
@@ -1470,12 +1495,13 @@ async def handle_file(message: types.Message):
 
     kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
     kb.add(KeyboardButton("❌ لغو"))
+    kb.add(KeyboardButton("🔙 برگشت به منو"))
 
     await message.answer(
         f"✅ فایل {category_name} با موفقیت دریافت شد!\n\n"
         f"📄 {file_name}\n\n"
         f"📝 حالا کپشن فایل رو وارد کن:\n\n"
-        f"💡 برای برگشت، روی **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+        f"💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
         reply_markup=kb
     )
     return
