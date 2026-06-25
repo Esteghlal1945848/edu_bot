@@ -9,6 +9,8 @@ from database.core import get_db, init_db
 from database.models import Archive
 
 from handlers.start import cmd_start, handle_buttons, handle_file
+from handlers.state import upload_state
+from aiogram.types import KeyboardButton
 
 
 ADMIN_ID = 7336595194
@@ -100,6 +102,37 @@ async def auto_save_from_channel(message: types.Message):
 
 
 # =========================
+# هندلر کپشن (Callback)
+# =========================
+async def handle_caption_callback(callback_query: types.CallbackQuery):
+    user_id = callback_query.from_user.id
+    
+    if callback_query.data.startswith("caption_file_"):
+        await callback_query.message.answer(
+            "📝 **لطفاً کپشن فایل رو به صورت متن وارد کن:**\n\n"
+            "مثال:\n"
+            "شیمی دهم ریاضی تایتان - جلسه ۱\n\n"
+            "⚠️ این کپشن به همراه فایل برای کاربر نمایش داده میشه.",
+            reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(
+                KeyboardButton("❌ لغو")
+            )
+        )
+        await callback_query.answer()
+        
+    elif callback_query.data.startswith("caption_book_"):
+        await callback_query.message.answer(
+            "📝 **لطفاً کپشن کتاب رو به صورت متن وارد کن:**\n\n"
+            "مثال:\n"
+            "کتاب ریاضی دهم خیلی سبز - فصل ۱\n\n"
+            "⚠️ این کپشن به همراه فایل برای کاربر نمایش داده میشه.",
+            reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(
+                KeyboardButton("❌ لغو")
+            )
+        )
+        await callback_query.answer()
+
+
+# =========================
 # STARTUP
 # =========================
 async def on_startup(dp):
@@ -146,7 +179,10 @@ async def main():
         content_types=[types.ContentType.TEXT]
     )
 
-    # 5️⃣ هندلر عمومی برای دیباگ (هر چیزی که به دست نیومد رو بگیر)
+    # 5️⃣ هندلر کپشن (Callback)
+    dp.register_callback_query_handler(handle_caption_callback)
+
+    # 6️⃣ هندلر عمومی برای دیباگ (هر چیزی که به دست نیومد رو بگیر)
     @dp.message_handler()
     async def catch_all(message: types.Message):
         print(f"🔍 پیام دریافت شد: {message.content_type} | متن: {message.text} | فایل: {message.document}")
