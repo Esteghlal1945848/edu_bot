@@ -1,3 +1,5 @@
+# handlers/start.py (کامل و نهایی)
+
 from aiogram import types
 from sqlalchemy import select, func
 from database.core import get_db
@@ -858,7 +860,7 @@ async def show_stats(message: types.Message):
     )
     await message.answer("👑 پنل مدیریت", reply_markup=kb)
 
-# ===================== آپلود فایل (ادمین) =====================
+# ===================== آپلود فایل (ادمین) - اصلاح شده =====================
 async def handle_file(message: types.Message):
     user_id = message.from_user.id
     
