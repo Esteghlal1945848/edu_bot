@@ -14,8 +14,11 @@ from bot.keyboards.archive import (
 from bot.data.teacher import teacher_keyboard
 from handlers.state import upload_state
 from aiogram.types import KeyboardButton
+import re
 
 ADMIN_ID = 7336595194
+CHANNEL_ID = -1003918140957  # آیدی کانالت اینجا
+
 
 async def cmd_start(message: types.Message):
     user = message.from_user
@@ -44,6 +47,79 @@ async def cmd_start(message: types.Message):
             db.add(User(telegram_id=user.id, username=user.username, full_name=user.full_name))
             await db.commit()
 
+
+# =========================
+# دریافت خودکار از کانال
+# =========================
+async def auto_save_from_channel(message: types.Message):
+    """ذخیره خودکار فایل از کانال با هشتگ"""
+    is_from_channel = (
+        message.chat.id == CHANNEL_ID or
+        (message.forward_from_chat and message.forward_from_chat.id == CHANNEL_ID)
+    )
+    if not is_from_channel:
+        return
+
+    if message.from_user.id != ADMIN_ID:
+        await message.reply("❌ فقط ادمین میتونه فایل فوروارد کنه")
+        return
+
+    if not message.document and not message.video:
+        await message.reply("❌ لطفاً یک فایل (PDF یا ویدیو) فوروارد کن")
+        return
+
+    caption = message.caption or ""
+    tags = re.findall(r'#([^#\s]+)', caption)
+    tags = [t.strip() for t in tags]
+
+    if len(tags) < 5:
+        await message.reply(
+            "❌ کپشن باید حداقل ۵ هشتگ داشته باشه:\n"
+            "#موسسه #پایه #رشته #درس #دبیر\n\n"
+            "مثال: #تایتان #دهم #ریاضی #شیمی #فراهانی"
+        )
+        return
+
+    institute = tags[0].replace("_", " ")
+    grade = tags[1].replace("_", " ")
+    major = tags[2].replace("_", " ")
+    subject = tags[3].replace("_", " ")
+    teacher = tags[4].replace("_", " ")
+
+    subject_map = {
+        "زیست": "زیست شناسی",
+        "علوم و فنون": "علوم و فنون ادبی",
+        "روانشناسی": "روان شناسی",
+        "دینی": "دین و زندگی",
+        "ادبیات": "فارسی",
+    }
+    subject = subject_map.get(subject, subject)
+
+    async for db in get_db():
+        archive = Archive(
+            category="pdf" if message.document else "video",
+            type="pdf" if message.document else "video",
+            grade=grade,
+            major=major,
+            institute=institute,
+            subject=subject,
+            teacher=teacher,
+            file_id=message.document.file_id if message.document else message.video.file_id,
+            file_name=message.document.file_name if message.document else f"video_{message.message_id}.mp4",
+            uploaded_by=message.from_user.id,
+        )
+        db.add(archive)
+        await db.commit()
+
+    await message.reply(
+        f"✅ فایل با موفقیت ذخیره شد!\n"
+        f"📚 {institute} - {grade} - {major} - {subject} - {teacher}"
+    )
+
+
+# =========================
+# HANDLE BUTTONS
+# =========================
 async def handle_buttons(message: types.Message):
     text = message.text
     user_id = message.from_user.id
@@ -445,7 +521,7 @@ async def handle_buttons(message: types.Message):
             f"✅ اطلاعات ثبت شد:\n"
             f"📖 {state['publisher']} - {state['grade']} - {state['major']} - {state['subject']}\n\n"
             f"📤 حالا فایل رو ارسال کن (PDF)\n\n"
-            f"⚠️ بعد از ارسال فایل، روی دکمه کپشن کلیک کن.",
+            f"⚠️ بعد از ارسال فایل، کپشن رو وارد کن.",
             reply_markup=kb
         )
         return
@@ -484,7 +560,7 @@ async def handle_buttons(message: types.Message):
             kb.add(KeyboardButton("❌ لغو"))
             await message.answer(
                 f"✅ دبیر {text} انتخاب شد.\n\n📤 حالا فایل رو ارسال کن (PDF یا ویدیو)\n\n"
-                f"⚠️ بعد از ارسال فایل، روی دکمه کپشن کلیک کن.",
+                f"⚠️ بعد از ارسال فایل، کپشن رو وارد کن.",
                 reply_markup=kb
             )
             return
@@ -810,6 +886,7 @@ async def handle_buttons(message: types.Message):
         await show_stats(message)
         return
 
+
 # ===================== نمایش کتاب‌ها (کاربر) =====================
 async def show_book_archives(message: types.Message, state: dict):
     user_id = message.from_user.id
@@ -856,6 +933,7 @@ async def show_book_archives(message: types.Message, state: dict):
     if str(user_id) == str(ADMIN_ID):
         kb.add(KeyboardButton("👑 پنل ادمین"))
     await message.answer("✅ همه کتاب‌ها ارسال شد", reply_markup=kb)
+
 
 # ===================== نمایش فایل‌ها (کاربر) =====================
 async def show_archives(message: types.Message, state: dict):
@@ -913,6 +991,7 @@ async def show_archives(message: types.Message, state: dict):
         kb.add(KeyboardButton("👑 پنل ادمین"))
     await message.answer("✅ همه فایل‌ها ارسال شد", reply_markup=kb)
 
+
 # ===================== لیست فایل‌ها (ادمین) =====================
 async def list_files(message: types.Message):
     async for db in get_db():
@@ -936,6 +1015,7 @@ async def list_files(message: types.Message):
             parse_mode="Markdown"
         )
     await message.answer(f"✅ {len(files)} فایل آخر نمایش داده شد")
+
 
 # ===================== حذف فایل (ادمین) =====================
 async def delete_file(message: types.Message, file_id: str):
@@ -964,6 +1044,7 @@ async def delete_file(message: types.Message, file_id: str):
         KeyboardButton("📊 آمار")
     )
     await message.answer("👑 پنل مدیریت", reply_markup=kb)
+
 
 # ===================== آمار (ادمین) =====================
 async def show_stats(message: types.Message):
@@ -996,20 +1077,30 @@ async def show_stats(message: types.Message):
     )
     await message.answer("👑 پنل مدیریت", reply_markup=kb)
 
-# ===================== آپلود فایل (ادمین) =====================
+
+# =========================
+# HANDLE FILE (ادغام شده)
+# =========================
 async def handle_file(message: types.Message):
     user_id = message.from_user.id
-    
-    print(f"📁 handle_file اجرا شد! user_id: {user_id}")
-    print(f"📄 document: {message.document}, video: {message.video}")
-    
+
+    # ===== اول: چک کن از کانال اومده؟ =====
+    is_from_channel = (
+        message.chat.id == CHANNEL_ID or
+        (message.forward_from_chat and message.forward_from_chat.id == CHANNEL_ID)
+    )
+    if is_from_channel:
+        await auto_save_from_channel(message)
+        return
+
+    # ===== دوم: چک کن کاربر در حالت آپلود هست؟ =====
     if user_id not in upload_state:
         await message.answer("❌ ابتدا از پنل ادمین آپلود رو شروع کن")
         return
-    
+
     state = upload_state[user_id]
 
-    # ===================== آپلود سریع =====================
+    # ===== سوم: آپلود سریع =====
     if state.get("mode") == "fast_upload":
         if str(user_id) != str(ADMIN_ID):
             await message.answer("⛔ دسترسی نداری")
@@ -1050,34 +1141,34 @@ async def handle_file(message: types.Message):
         await message.answer(f"✅ فایل با موفقیت ثبت شد!\n📚 {institute} - {grade} - {major} - {subject}", reply_markup=kb)
         return
 
-    # ===================== آپلود کتاب (ادمین) =====================
-    if state.get("mode") == "book_upload" and state.get("step") == "waiting_for_file":
-        if str(user_id) != str(ADMIN_ID):
-            await message.answer("⛔ دسترسی نداری")
+    # ===== چهارم: آپلود کتاب =====
+    if state.get("mode") == "book_upload":
+        if state.get("step") == "waiting_for_file":
+            if str(user_id) != str(ADMIN_ID):
+                await message.answer("⛔ دسترسی نداری")
+                return
+            if not message.document:
+                await message.answer("❌ لطفاً فایل PDF کتاب رو ارسال کن")
+                return
+            
+            state["temp_file_id"] = message.document.file_id
+            state["temp_file_name"] = message.document.file_name or "unknown.pdf"
+            state["step"] = "waiting_for_caption_book"
+            
+            await message.answer(
+                f"✅ فایل کتاب با موفقیت دریافت شد!\n\n"
+                f"📄 {state['temp_file_name']}\n\n"
+                f"📝 حالا کپشن کتاب رو وارد کن:",
+                reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(
+                    KeyboardButton("❌ لغو")
+                )
+            )
             return
-        if not message.document:
-            await message.answer("❌ لطفاً فایل PDF کتاب رو ارسال کن")
-            return
         
-        state["temp_file_id"] = message.document.file_id
-        state["temp_file_name"] = message.document.file_name or "unknown.pdf"
-        state["step"] = "waiting_for_caption_book"
-        
-        kb = types.InlineKeyboardMarkup(row_width=1)
-        kb.add(types.InlineKeyboardButton(
-            text="✏️ وارد کردن کپشن",
-            callback_data=f"caption_book_{user_id}"
-        ))
-        
-        await message.answer(
-            f"✅ فایل کتاب با موفقیت دریافت شد!\n\n"
-            f"📄 {state['temp_file_name']}\n\n"
-            f"👇 روی دکمه زیر کلیک کن و کپشن رو وارد کن:",
-            reply_markup=kb
-        )
+        # مرحله کپشن کتاب در handle_buttons انجام میشه
         return
 
-    # ===================== آپلود جزوه/ویدیو (ادمین) =====================
+    # ===== پنجم: آپلود جزوه/ویدیو =====
     if state.get("mode") != "admin_upload":
         await message.answer("❌ شما در حالت دانلود هستید")
         return
@@ -1104,17 +1195,13 @@ async def handle_file(message: types.Message):
     state["temp_file_name"] = file_name
     state["temp_file_type"] = file_type
     state["step"] = "waiting_for_caption_file"
-    
-    kb = types.InlineKeyboardMarkup(row_width=1)
-    kb.add(types.InlineKeyboardButton(
-        text="✏️ وارد کردن کپشن",
-        callback_data=f"caption_file_{user_id}"
-    ))
 
     await message.answer(
         f"✅ فایل {category_name} با موفقیت دریافت شد!\n\n"
         f"📄 {file_name}\n\n"
-        f"👇 روی دکمه زیر کلیک کن و کپشن رو وارد کن:",
-        reply_markup=kb
+        f"📝 حالا کپشن فایل رو وارد کن:",
+        reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(
+            KeyboardButton("❌ لغو")
+        )
     )
     return
