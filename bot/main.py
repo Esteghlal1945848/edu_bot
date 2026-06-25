@@ -134,7 +134,7 @@ async def main():
     # 2️⃣ استارت
     dp.register_message_handler(cmd_start, commands=["start"])
 
-    # 3️⃣ آپلود فایل توسط ادمین (از طریق پنل) - اولویت با فایل‌ها
+    # 3️⃣ آپلود فایل توسط ادمین (از طریق پنل)
     dp.register_message_handler(
         handle_file,
         content_types=[types.ContentType.DOCUMENT, types.ContentType.VIDEO]
@@ -145,6 +145,11 @@ async def main():
         handle_buttons,
         content_types=[types.ContentType.TEXT]
     )
+
+    # 5️⃣ هندلر عمومی برای دیباگ (هر چیزی که به دست نیومد رو بگیر)
+    @dp.message_handler()
+    async def catch_all(message: types.Message):
+        print(f"🔍 پیام دریافت شد: {message.content_type} | متن: {message.text} | فایل: {message.document}")
 
     await on_startup(dp)
 
