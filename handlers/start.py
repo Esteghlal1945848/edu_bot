@@ -860,7 +860,7 @@ async def show_stats(message: types.Message):
     )
     await message.answer("👑 پنل مدیریت", reply_markup=kb)
 
-# ===================== آپلود فایل (ادمین) - اصلاح شده =====================
+# ===================== آپلود فایل (ادمین) =====================
 async def handle_file(message: types.Message):
     user_id = message.from_user.id
     
@@ -925,10 +925,9 @@ async def handle_file(message: types.Message):
         state["step"] = "waiting_for_caption_book"
         
         await message.answer(
-            "📝 **لطفاً کپشن کتاب رو وارد کن:**\n\n"
-            "مثال:\n"
-            "کتاب ریاضی دهم خیلی سبز - فصل ۱\n\n"
-            "⚠️ این کپشن به همراه فایل برای کاربر نمایش داده میشه.",
+            f"✅ فایل کتاب با موفقیت دریافت شد!\n\n"
+            f"📄 {state['temp_file_name']}\n\n"
+            f"📝 حالا کپشن کتاب رو وارد کن:",
             reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(
                 KeyboardButton("❌ لغو")
             )
@@ -981,6 +980,7 @@ async def handle_file(message: types.Message):
         grade = state["grade"]
         major = state["major"]
         subject = state["subject"]
+        file_name = state["temp_file_name"]
         
         del upload_state[user_id]
         
@@ -989,11 +989,14 @@ async def handle_file(message: types.Message):
         kb.add(KeyboardButton("❌ لغو"))
         
         await message.answer(
-            f"✅ کتاب با موفقیت ثبت شد!\n\n"
+            f"✅ کتاب با موفقیت در دیتابیس ثبت شد!\n\n"
             f"📖 {publisher_name} - {grade} - {major} - {subject}\n"
+            f"📄 {file_name}\n"
             f"📝 کپشن: {caption}\n\n"
+            f"🔹 این کتاب در بخش **📖 کتاب کمک آموزشی** کاربران قابل مشاهده است.\n\n"
             f"برای آپلود کتاب بعدی، روی '⚡ ادامه' بزن",
-            reply_markup=kb
+            reply_markup=kb,
+            parse_mode="Markdown"
         )
         return
 
@@ -1009,10 +1012,14 @@ async def handle_file(message: types.Message):
         file_id = message.document.file_id
         file_name = message.document.file_name or "unknown.pdf"
         file_type = "pdf"
+        file_type_persian = "جزوه"
+        category_name = "جزوه"
     elif message.video:
         file_id = message.video.file_id
         file_name = f"video_{message.video.file_id[:8]}.mp4"
         file_type = "video"
+        file_type_persian = "ویدیو"
+        category_name = "ویدیو"
     else:
         await message.answer("❌ لطفاً فقط فایل PDF یا ویدیو ارسال کن")
         return
@@ -1023,17 +1030,16 @@ async def handle_file(message: types.Message):
     state["step"] = "waiting_for_caption_file"
 
     await message.answer(
-        "📝 **لطفاً کپشن فایل رو وارد کن:**\n\n"
-        "مثال:\n"
-        "شیمی دهم ریاضی تایتان - جلسه ۱\n\n"
-        "⚠️ این کپشن به همراه فایل برای کاربر نمایش داده میشه.",
+        f"✅ فایل {category_name} با موفقیت دریافت شد!\n\n"
+        f"📄 {file_name}\n\n"
+        f"📝 حالا کپشن فایل رو وارد کن:",
         reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(
             KeyboardButton("❌ لغو")
         )
     )
     return
 
-    # ===================== دریافت کپشن جزوه/ویدیو (داخل handle_file) =====================
+    # ===================== دریافت کپشن جزوه/ویدیو =====================
     if state.get("mode") == "admin_upload" and state.get("step") == "waiting_for_caption_file":
         if str(user_id) != str(ADMIN_ID):
             await message.answer("⛔ دسترسی نداری")
@@ -1074,11 +1080,13 @@ async def handle_file(message: types.Message):
             db.add(archive)
             await db.commit()
         
+        category_name = "جزوه" if state.get("category") == "pdf" else "ویدیو"
         grade = state["grade"]
         major = state["major"]
         institute = state["institute"]
         subject = state["subject"]
         teacher = state.get("teacher", "ندارد")
+        file_name = state["temp_file_name"]
         
         del upload_state[user_id]
         
@@ -1087,11 +1095,14 @@ async def handle_file(message: types.Message):
         kb.add(KeyboardButton("❌ لغو"))
         
         await message.answer(
-            f"✅ فایل با موفقیت ثبت شد!\n\n"
+            f"✅ {category_name} با موفقیت در دیتابیس ثبت شد!\n\n"
             f"📚 {grade} - {major} - {institute} - {subject}\n"
             f"👨‍🏫 دبیر: {teacher}\n"
+            f"📄 {file_name}\n"
             f"📝 کپشن: {caption}\n\n"
-            f"برای آپلود فایل بعدی، روی '⚡ ادامه' بزن",
-            reply_markup=kb
+            f"🔹 این {category_name} در بخش **{'📚 جزوه' if category_name == 'جزوه' else '🎥 ویدئو'}** کاربران قابل مشاهده است.\n\n"
+            f"برای آپلود {category_name} بعدی، روی '⚡ ادامه' بزن",
+            reply_markup=kb,
+            parse_mode="Markdown"
         )
         return
