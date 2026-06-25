@@ -16,6 +16,7 @@ async def teacher_keyboard(grade, major, institute, subject):
         "روانشناسی": "روان شناسی",
         "دینی": "دین و زندگی",
         "ادبیات": "فارسی",
+        "علوم و فنون ادبی": "علوم و فنون ادبی",
     }
     subject = subject_map.get(subject, subject)
 
@@ -55,6 +56,7 @@ async def teacher_keyboard(grade, major, institute, subject):
     # ===== اگر در دیتابیس نبود، از دیکشنری ثابت استفاده کن =====
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
 
+    # دیکشنری دبیران (بدون کلاسینو)
     data = {
         "ماز": {
             ("دهم", "انسانی", "علوم و فنون ادبی"): ["عماد فیض آبادی"],
