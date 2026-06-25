@@ -1,4 +1,4 @@
-# handlers/start.py (کامل و نهایی)
+# handlers/start.py (کامل و نهایی - با ساختار درست handle_file)
 
 from aiogram import types
 from sqlalchemy import select, func
@@ -911,7 +911,7 @@ async def handle_file(message: types.Message):
         await message.answer(f"✅ فایل با موفقیت ثبت شد!\n📚 {institute} - {grade} - {major} - {subject}", reply_markup=kb)
         return
 
-    # ===================== آپلود کتاب (ادمین) =====================
+    # ===================== آپلود کتاب (ادمین) - دریافت فایل =====================
     if state.get("mode") == "book_upload" and state.get("step") == "waiting_for_file":
         if str(user_id) != str(ADMIN_ID):
             await message.answer("⛔ دسترسی نداری")
@@ -934,7 +934,7 @@ async def handle_file(message: types.Message):
         )
         return
 
-    # ===================== دریافت کپشن کتاب =====================
+    # ===================== آپلود کتاب (ادمین) - دریافت کپشن =====================
     if state.get("mode") == "book_upload" and state.get("step") == "waiting_for_caption_book":
         if str(user_id) != str(ADMIN_ID):
             await message.answer("⛔ دسترسی نداری")
@@ -1000,7 +1000,7 @@ async def handle_file(message: types.Message):
         )
         return
 
-    # ===================== آپلود جزوه/ویدیو (ادمین) =====================
+    # ===================== آپلود جزوه/ویدیو (ادمین) - دریافت فایل =====================
     if state.get("mode") != "admin_upload":
         await message.answer("❌ شما در حالت دانلود هستید")
         return
@@ -1012,13 +1012,11 @@ async def handle_file(message: types.Message):
         file_id = message.document.file_id
         file_name = message.document.file_name or "unknown.pdf"
         file_type = "pdf"
-        file_type_persian = "جزوه"
         category_name = "جزوه"
     elif message.video:
         file_id = message.video.file_id
         file_name = f"video_{message.video.file_id[:8]}.mp4"
         file_type = "video"
-        file_type_persian = "ویدیو"
         category_name = "ویدیو"
     else:
         await message.answer("❌ لطفاً فقط فایل PDF یا ویدیو ارسال کن")
@@ -1039,7 +1037,7 @@ async def handle_file(message: types.Message):
     )
     return
 
-    # ===================== دریافت کپشن جزوه/ویدیو =====================
+    # ===================== آپلود جزوه/ویدیو (ادمین) - دریافت کپشن =====================
     if state.get("mode") == "admin_upload" and state.get("step") == "waiting_for_caption_file":
         if str(user_id) != str(ADMIN_ID):
             await message.answer("⛔ دسترسی نداری")
