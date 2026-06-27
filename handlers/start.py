@@ -34,14 +34,33 @@ async def send_join_message(m):
     kb = types.InlineKeyboardMarkup(row_width=1).add(types.InlineKeyboardButton("📢 عضویت در کانال", url=CHANNEL_LINK))
     await m.answer("🔒 **برای استفاده از ربات باید عضو کانال ما باشید.**\n\n👇 روی دکمه زیر کلیک کنید، عضو شوید و سپس **/start** رو بزنید.", reply_markup=kb, parse_mode="Markdown")
 
+# ========================= ارسال فایل با تایمر ۳۰ ثانیه =========================
 async def send_file_with_timer(bot, chat_id, file_id, caption="", delay=30):
-    await bot.send_document(chat_id, file_id, caption=caption)
-    msg = await bot.send_message(chat_id, f"⏳ **این فایل تا {delay} ثانیه دیگه پاک میشه!**\n\n⬇️ لطفاً سریع دانلود کنید.\n\n🕐 {delay} ثانیه مهلت دارید.", parse_mode="Markdown")
-    async def delete_timer():
+    """ارسال فایل با پیام تایمر و حذف خودکار فایل و پیام بعد از ۳۰ ثانیه"""
+    
+    # ارسال فایل
+    sent_file = await bot.send_document(chat_id, file_id, caption=caption)
+    
+    # ارسال پیام تایمر
+    timer_msg = await bot.send_message(
+        chat_id,
+        f"⏳ **این فایل تا {delay} ثانیه دیگه پاک میشه!**\n\n"
+        f"⬇️ لطفاً سریع دانلود کنید.\n\n"
+        f"🕐 {delay} ثانیه مهلت دارید.",
+        parse_mode="Markdown"
+    )
+    
+    # تابع حذف همزمان فایل و پیام تایمر
+    async def delete_timer_and_file():
         await asyncio.sleep(delay)
-        try: await bot.delete_message(chat_id, msg.message_id)
-        except: pass
-    asyncio.create_task(delete_timer())
+        try:
+            await bot.delete_message(chat_id, timer_msg.message_id)
+            await bot.delete_message(chat_id, sent_file.message_id)
+        except:
+            pass
+    
+    asyncio.create_task(delete_timer_and_file())
+    return sent_file
 
 def admin_kb():
     kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
