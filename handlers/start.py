@@ -14,7 +14,7 @@ from datetime import datetime
 
 ADMIN_ID = 7336595194
 CHANNEL_ID = -1002505515904
-CHANNEL_LINK "https://t.me/School_learny"
+CHANNEL_LINK = "https://t.me/School_learny"
 
 # ========================= helper =========================
 async def main_menu(user_id: int):
