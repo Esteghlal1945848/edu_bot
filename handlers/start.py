@@ -14,7 +14,7 @@ from datetime import datetime
 
 ADMIN_ID = 7336595194
 CHANNEL_ID = -1002505515904
-CHANNEL_LINK = "https://t.me/School_learny"
+CHANNEL_LINK "https://t.me/School_learny"
 
 # ========================= helper =========================
 async def main_menu(user_id: int):
@@ -34,7 +34,6 @@ async def send_join_message(m):
     kb = types.InlineKeyboardMarkup(row_width=1).add(types.InlineKeyboardButton("📢 عضویت در کانال", url=CHANNEL_LINK))
     await m.answer("🔒 **برای استفاده از ربات باید عضو کانال ما باشید.**\n\n👇 روی دکمه زیر کلیک کنید، عضو شوید و سپس **/start** رو بزنید.", reply_markup=kb, parse_mode="Markdown")
 
-# ========================= ارسال فایل با تایمر =========================
 async def send_file_with_timer(bot, chat_id, file_id, caption="", delay=30):
     sent_file = await bot.send_document(chat_id, file_id, caption=caption)
     timer_msg = await bot.send_message(
@@ -188,11 +187,19 @@ async def handle_buttons(m: types.Message):
             except:
                 return await m.answer("❌ لطفاً یک عدد معتبر وارد کن")
             
-            # پیدا کردن دبیر
             async for db in get_db():
-                pub = await db.scalar(select(Publisher).where(Publisher.name == state["institute"]))
+                # پیدا کردن یا ساختن publisher
+                pub = await db.scalar(
+                    select(Publisher).where(
+                        func.lower(Publisher.name) == func.lower(state["institute"])
+                    )
+                )
                 if not pub:
-                    return await m.answer("❌ موسسه پیدا نشد")
+                    pub = Publisher(name=state["institute"], type="institute")
+                    db.add(pub)
+                    await db.flush()
+                
+                # پیدا کردن یا ساختن دبیر
                 teacher = await db.scalar(
                     select(Teacher).where(
                         Teacher.name == state["teacher_name"],
@@ -203,7 +210,17 @@ async def handle_buttons(m: types.Message):
                     )
                 )
                 if not teacher:
-                    return await m.answer("❌ دبیر پیدا نشد")
+                    teacher = Teacher(
+                        name=state["teacher_name"],
+                        publisher_id=pub.id,
+                        grade=state["grade"],
+                        major=state["major"],
+                        subject=state["subject"]
+                    )
+                    db.add(teacher)
+                    await db.flush()
+                
+                await db.commit()
                 state["teacher_id"] = teacher.id
             
             state["session_number"] = session_num
@@ -213,14 +230,13 @@ async def handle_buttons(m: types.Message):
             kb.add(KeyboardButton("❌ لغو"))
             kb.add(KeyboardButton("🔙 برگشت به منو"))
             
-            await m.answer(
+            return await m.answer(
                 f"✅ اطلاعات ثبت شد:\n"
                 f"👨‍🏫 {state['teacher_name']}\n"
                 f"📚 جلسه {session_num}\n\n"
                 f"📤 حالا فایل جلسه رو ارسال کن (PDF یا ویدیو)",
                 reply_markup=kb
             )
-            return
 
     # ===================== دانلود جزوه/ویدیو =====================
     if t in ["📚 جزوه", "🎥 ویدئو"]:
@@ -553,40 +569,10 @@ async def handle_buttons(m: types.Message):
             del upload_state[uid]
             return await m.answer("👑 پنل مدیریت", reply_markup=admin_kb())
     
-    # ===================== نمایش جلسات (کاربر) =====================
+    # ===================== انتخاب جلسه (کاربر) =====================
     if uid in upload_state and upload_state[uid].get("mode") == "session_select":
-        session_text = t
-        if session_text == "🔙 برگشت به منو":
-            del upload_state[uid]
-            return await m.answer("🔙 به منوی اصلی برگشتی.", reply_markup=await main_menu(uid))
-        
-        if not session_text.startswith("جلسه "):
-            return await m.answer("❌ لطفاً یکی از جلسات رو انتخاب کن")
-        
-        try:
-            session_num = int(session_text.replace("جلسه ", "").strip())
-        except:
-            return await m.answer("❌ شماره جلسه نامعتبر")
-        
-        state = upload_state[uid]
-        teacher_id = state.get("teacher_id")
-        
-        async for db in get_db():
-            session = await db.scalar(
-                select(Session).where(
-                    Session.teacher_id == teacher_id,
-                    Session.session_number == session_num
-                )
-            )
-        
-        if not session:
-            return await m.answer(f"❌ جلسه {session_num} پیدا نشد")
-        
-        await send_file_with_timer(m.bot, uid, session.file_id, session.caption)
-        del upload_state[uid]
-        kb = await main_menu(uid)
-        await m.answer("✅ فایل جلسه ارسال شد", reply_markup=kb)
-        return
+        # این بخش با Callback مدیریت میشه
+        pass
     
     if t == "👥 لیست کاربران": return await list_users(m)
     if t == "⚙️ تنظیمات":
@@ -699,41 +685,74 @@ async def show_book_archives(m: types.Message, state: dict):
 
 async def show_archives(m: types.Message, state: dict):
     user_id = m.from_user.id
-    cat = state.get("category","pdf")
     
     async for db in get_db():
-        # پیدا کردن دبیر
+        # پیدا کردن یا ساختن publisher
+        pub = await db.scalar(
+            select(Publisher).where(
+                func.lower(Publisher.name) == func.lower(state["institute"])
+            )
+        )
+        if not pub:
+            pub = Publisher(name=state["institute"], type="institute")
+            db.add(pub)
+            await db.flush()
+        
+        # پیدا کردن یا ساختن دبیر
         teacher = await db.scalar(
             select(Teacher).where(
                 Teacher.name == state["teacher"],
+                Teacher.publisher_id == pub.id,
                 Teacher.grade == state["grade"],
                 Teacher.major == state["major"],
-                Teacher.publisher_id == select(Publisher.id).where(Publisher.name == state["institute"])
+                Teacher.subject == state["subject"]
             )
         )
-        
         if not teacher:
-            kb = types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("🔙 برگشت به منو"))
-            return await m.answer("❌ دبیر پیدا نشد", reply_markup=kb)
+            teacher = Teacher(
+                name=state["teacher"],
+                publisher_id=pub.id,
+                grade=state["grade"],
+                major=state["major"],
+                subject=state["subject"]
+            )
+            db.add(teacher)
+            await db.flush()
+        
+        await db.commit()
+        teacher_id = teacher.id
         
         # گرفتن جلسات
         sessions = (await db.execute(
-            select(Session).where(Session.teacher_id == teacher.id).order_by(Session.session_number)
+            select(Session).where(
+                Session.teacher_id == teacher_id
+            ).order_by(Session.session_number)
         )).scalars().all()
     
     if not sessions:
-        kb = types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("🔙 برگشت به منو"))
-        return await m.answer("❌ هیچ جلسه‌ای برای این دبیر پیدا نشد", reply_markup=kb)
+        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add(KeyboardButton("🔙 برگشت به منو"))
+        return await m.answer(
+            f"❌ هیچ جلسه‌ای برای **{state['teacher']}** ثبت نشده",
+            reply_markup=kb,
+            parse_mode="Markdown"
+        )
     
-    # نمایش لیست جلسات
-    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    # دکمه‌های شیشه‌ای (Inline) برای جلسات
+    kb = types.InlineKeyboardMarkup(row_width=5)
+    buttons = []
     for s in sessions:
-        kb.add(KeyboardButton(f"جلسه {s.session_number}"))
-    kb.add(KeyboardButton("🔙 برگشت به منو"))
+        buttons.append(
+            types.InlineKeyboardButton(
+                f"جلسه {s.session_number}",
+                callback_data=f"session_{s.id}"
+            )
+        )
+    kb.add(*buttons)
     
     upload_state[user_id] = {
         "mode": "session_select",
-        "teacher_id": teacher.id,
+        "teacher_id": teacher_id,
         "state": state
     }
     
@@ -741,7 +760,8 @@ async def show_archives(m: types.Message, state: dict):
         f"👨‍🏫 **{state['teacher']}**\n"
         f"📚 {state['grade']} - {state['major']} - {state['subject']}\n\n"
         f"جلسه مورد نظر رو انتخاب کن:",
-        reply_markup=kb
+        reply_markup=kb,
+        parse_mode="Markdown"
     )
 
 # ========================= HANDLE FILE =========================
@@ -799,6 +819,26 @@ async def handle_file(m: types.Message):
 
 # ========================= HANDLE CALLBACK =========================
 async def handle_callback(cb: types.CallbackQuery):
+    uid = cb.from_user.id
+    
+    if cb.data.startswith("session_"):
+        session_id = int(cb.data.replace("session_", ""))
+        
+        async for db in get_db():
+            session = await db.scalar(
+                select(Session).where(Session.id == session_id)
+            )
+        
+        if not session:
+            return await cb.answer("❌ جلسه پیدا نشد", show_alert=True)
+        
+        await cb.answer()
+        await send_file_with_timer(cb.message.bot, uid, session.file_id, session.caption or "")
+        
+        if uid in upload_state:
+            del upload_state[uid]
+        return
+    
     if cb.data.startswith("users_page_"):
         page = int(cb.data.split("_")[2])
         await list_users(cb.message, page)
