@@ -10,6 +10,8 @@ from bot.keyboards.archive import (
     subject_keyboard,
     book_subject_keyboard,
     book_publisher_keyboard,
+    book_grade_keyboard,
+    book_grades,
 )
 from bot.data.teacher import teacher_keyboard
 from handlers.state import upload_state
@@ -19,8 +21,8 @@ import asyncio
 from datetime import datetime
 
 ADMIN_ID = 7336595194
-CHANNEL_ID = -1003918140957
-CHANNEL_LINK = "https://t.me/YourChannelUsername"
+CHANNEL_ID = -1002505515904
+CHANNEL_LINK = "https://t.me/School_learny"
 
 
 # =========================
@@ -354,13 +356,9 @@ async def handle_buttons(message: types.Message):
         if user_id in upload_state:
             del upload_state[user_id]
         upload_state[user_id] = {"mode": "user_download", "step": "book_grade", "category": "book"}
-        kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        kb.row(KeyboardButton("دهم"), KeyboardButton("یازدهم"))
-        kb.add(KeyboardButton("دوازدهم"))
-        kb.add(KeyboardButton("🔙 برگشت به منو"))
         await message.answer(
             "📖 **کتاب کمک آموزشی**\n\nکدوم پایه؟\n\n💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
-            reply_markup=kb
+            reply_markup=await book_grade_keyboard()
         )
         return
 
@@ -543,7 +541,7 @@ async def handle_buttons(message: types.Message):
                 return
 
     # ===================== GRADE =====================
-    if text in ["دهم", "یازدهم", "دوازدهم"]:
+    if text in ["دهم", "یازدهم", "دوازدهم", "جامع"]:
         # کتاب (دانلود)
         if user_id in upload_state and upload_state[user_id].get("step") == "book_grade":
             upload_state[user_id]["grade"] = text
@@ -571,18 +569,6 @@ async def handle_buttons(message: types.Message):
                 f"📖 {upload_state[user_id]['publisher']} - {grade}\n\nرشته را انتخاب کن:",
                 reply_markup=kb
             )
-            return
-        
-        # آپلود کتاب (ادمین) - انتخاب پایه (مسیر قبلی)
-        if user_id in upload_state and upload_state[user_id].get("mode") == "book_upload" and upload_state[user_id].get("step") == "grade":
-            upload_state[user_id]["grade"] = text
-            upload_state[user_id]["step"] = "major"
-            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            kb.add(KeyboardButton(f"رشته:{text}|ریاضی"))
-            kb.add(KeyboardButton(f"رشته:{text}|تجربی"))
-            kb.add(KeyboardButton(f"رشته:{text}|انسانی"))
-            kb.add(KeyboardButton("🔙 برگشت به منو"))
-            await message.answer("رشته را انتخاب کن:", reply_markup=kb)
             return
         
         # آپلود جزوه/ویدیو (ادمین)
@@ -646,17 +632,6 @@ async def handle_buttons(message: types.Message):
             state["step"] = "book_subject"
             await message.answer(
                 f"📖 {state['publisher']} - {grade} - {major}\n\nدرس مورد نظر رو انتخاب کن:",
-                reply_markup=await book_subject_keyboard(state["publisher"], grade, major)
-            )
-            return
-        
-        # آپلود کتاب (ادمین) - مسیر قبلی
-        if state.get("mode") == "book_upload":
-            state["grade"] = grade
-            state["major"] = major
-            state["step"] = "book_subject"
-            await message.answer(
-                "📖 درس مورد نظر رو انتخاب کن:",
                 reply_markup=await book_subject_keyboard(state["publisher"], grade, major)
             )
             return
