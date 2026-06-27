@@ -18,50 +18,31 @@ def major_keyboard(grade):
 
 async def institute_keyboard():
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-
     async for db in get_db():
-        result = await db.execute(
-            select(Publisher).where(Publisher.type == "institute")
-        )
+        result = await db.execute(select(Publisher).where(Publisher.type == "institute"))
         institutes = result.scalars().all()
-
     added = set()
     for ins in institutes:
         kb.add(KeyboardButton(ins.name))
         added.add(ins.name)
-
     defaults = ["ماز", "آلفا اسکول", "تایتان"]
     for name in defaults:
         if name not in added:
             kb.add(KeyboardButton(name))
-
     return kb
 
 async def publisher_keyboard():
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-
     async for db in get_db():
-        result = await db.execute(
-            select(Publisher).where(
-                Publisher.type == "book_publisher"
-            )
-        )
+        result = await db.execute(select(Publisher).where(Publisher.type == "book_publisher"))
         publishers = result.scalars().all()
-
     if publishers:
         for p in publishers:
             kb.add(KeyboardButton(p.name))
     else:
-        defaults = [
-            "خیلی سبز",
-            "نشر الگو",
-            "فرمول بیست",
-            "نردبام",
-            "IQ"
-        ]
+        defaults = ["خیلی سبز", "نشر الگو", "فرمول بیست", "نردبام", "IQ"]
         for p in defaults:
             kb.add(KeyboardButton(p))
-
     return kb
 
 # ========== درس‌های جزوه و ویدیو ==========
@@ -168,47 +149,33 @@ book_subjects = {
     }
 }
 
-# ========== لیست پایه‌های کتاب (با جامع) ==========
-book_grades = ["دهم", "یازدهم", "دوازدهم", "جامع"]
-
-
 async def book_grade_keyboard():
-    """کیبورد پایه‌های کتاب با جامع"""
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(KeyboardButton("دهم"), KeyboardButton("یازدهم"))
     kb.row(KeyboardButton("دوازدهم"), KeyboardButton("جامع"))
     kb.add(KeyboardButton("🔙 برگشت به منو"))
     return kb
 
-
 async def book_publisher_keyboard(grade, major):
-    """نمایش ناشرهای کتاب بر اساس پایه و رشته"""
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    
     added = set()
     for publisher, grades in book_subjects.items():
         if grade in grades and major in grades[grade]:
             kb.add(KeyboardButton(publisher))
             added.add(publisher)
-    
     if not added:
         for publisher in book_subjects.keys():
             kb.add(KeyboardButton(publisher))
-    
     kb.add(KeyboardButton("🔙 برگشت به منو"))
     return kb
 
 async def book_subject_keyboard(publisher, grade, major):
-    """نمایش دروس یک ناشر بر اساس پایه و رشته"""
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    
     subjects_list = book_subjects.get(publisher, {}).get(grade, {}).get(major, [])
-    
     if subjects_list:
         for subject in subjects_list:
             kb.add(KeyboardButton(subject))
     else:
         kb.add(KeyboardButton("❌ درسی یافت نشد"))
-    
     kb.add(KeyboardButton("🔙 برگشت به منو"))
     return kb
