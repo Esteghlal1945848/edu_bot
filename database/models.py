@@ -1,4 +1,3 @@
-# database/models.py
 from sqlalchemy import Column, Integer, String, BigInteger, DateTime, ForeignKey, JSON
 from datetime import datetime
 from database.core import Base
@@ -41,6 +40,18 @@ class Archive(Base):
     book_name = Column(String, nullable=True)
     file_id = Column(String)
     file_name = Column(String, nullable=True)
-    caption = Column(String, nullable=True)  # جدید
+    caption = Column(String, nullable=True)
+    uploaded_by = Column(BigInteger)
+    created_at = Column(DateTime, default=datetime.now)
+
+class Session(Base):
+    __tablename__ = "sessions"
+    id = Column(Integer, primary_key=True)
+    teacher_id = Column(Integer, ForeignKey("teachers.id"))
+    session_number = Column(Integer)
+    title = Column(String, nullable=True)
+    file_id = Column(String)
+    file_name = Column(String)
+    caption = Column(String, nullable=True)
     uploaded_by = Column(BigInteger)
     created_at = Column(DateTime, default=datetime.now)
