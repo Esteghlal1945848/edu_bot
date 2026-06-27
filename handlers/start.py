@@ -5,6 +5,7 @@ from database.models import User, Archive, Publisher, Teacher, Session
 from bot.keyboards.archive import (
     grade_keyboard, major_keyboard, institute_keyboard, publisher_keyboard,
     subject_keyboard, book_subject_keyboard, book_publisher_keyboard, book_grade_keyboard,
+    subjects,
 )
 from bot.data.teacher import teacher_keyboard
 from handlers.state import upload_state
@@ -147,11 +148,15 @@ async def handle_buttons(m: types.Message):
         if state.get("step") == "ask_major":
             state["major"] = t
             state["step"] = "ask_subject"
+            subject_list = subjects.get(t, [])
             kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            for s in subjects.get(t, []):
+            for s in subject_list:
                 kb.add(KeyboardButton(s))
             kb.add(KeyboardButton("🔙 برگشت به منو"))
-            return await m.answer(f"👨‍🏫 دبیر: {state['teacher_name']}\n📚 پایه: {state['grade']}\n🎓 رشته: {t}\n\nدرس رو انتخاب کن:", reply_markup=kb)
+            return await m.answer(
+                f"👨‍🏫 دبیر: {state['teacher_name']}\n📚 پایه: {state['grade']}\n🎓 رشته: {t}\n\nدرس رو انتخاب کن:",
+                reply_markup=kb
+            )
         
         if state.get("step") == "ask_subject":
             state["subject"] = t
@@ -188,7 +193,6 @@ async def handle_buttons(m: types.Message):
                 return await m.answer("❌ لطفاً یک عدد معتبر وارد کن")
             
             async for db in get_db():
-                # پیدا کردن یا ساختن publisher
                 pub = await db.scalar(
                     select(Publisher).where(
                         func.lower(Publisher.name) == func.lower(state["institute"])
@@ -199,7 +203,6 @@ async def handle_buttons(m: types.Message):
                     db.add(pub)
                     await db.flush()
                 
-                # پیدا کردن یا ساختن دبیر
                 teacher = await db.scalar(
                     select(Teacher).where(
                         Teacher.name == state["teacher_name"],
@@ -406,12 +409,24 @@ async def handle_buttons(m: types.Message):
         return await m.answer(f"✅ اطلاعات ثبت شد:\n📖 {upload_state[uid]['publisher']} - {upload_state[uid]['grade']} - {upload_state[uid]['major']} - {upload_state[uid]['subject']}\n\n📤 حالا فایل رو ارسال کن (PDF)\n\n💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.", reply_markup=kb)
     
     if uid in upload_state and upload_state[uid].get("step") == "institute":
-        state = upload_state[uid]; state["institute"] = t; state["step"] = "subject"
+        state = upload_state[uid]
+        state["institute"] = t
+        state["step"] = "subject"
+        major = state.get("major", "")
+        subject_list = subjects.get(major, [])
+        if not subject_list:
+            kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            kb.add(KeyboardButton("🔙 برگشت به منو"))
+            return await m.answer(f"❌ درسی برای رشته {major} پیدا نشد", reply_markup=kb)
         kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        for s in subjects.get(state["major"], []):
+        for s in subject_list:
             kb.add(KeyboardButton(s))
         kb.add(KeyboardButton("🔙 برگشت به منو"))
-        return await m.answer("📚 درس را انتخاب کن:\n\n💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.", reply_markup=kb)
+        return await m.answer(
+            f"🏛 موسسه: {t}\n\n📚 درس را انتخاب کن:\n\n💡 برای برگشت، روی دکمه **🔙 برگشت به منو** کلیک کن یا **/start** رو بزن.",
+            reply_markup=kb,
+            parse_mode="Markdown"
+        )
     
     if uid in upload_state and upload_state[uid].get("step") == "subject":
         state = upload_state[uid]; state["subject"] = t; state["step"] = "teacher"
@@ -687,7 +702,6 @@ async def show_archives(m: types.Message, state: dict):
     user_id = m.from_user.id
     
     async for db in get_db():
-        # پیدا کردن یا ساختن publisher
         pub = await db.scalar(
             select(Publisher).where(
                 func.lower(Publisher.name) == func.lower(state["institute"])
@@ -698,7 +712,6 @@ async def show_archives(m: types.Message, state: dict):
             db.add(pub)
             await db.flush()
         
-        # پیدا کردن یا ساختن دبیر
         teacher = await db.scalar(
             select(Teacher).where(
                 Teacher.name == state["teacher"],
@@ -722,7 +735,6 @@ async def show_archives(m: types.Message, state: dict):
         await db.commit()
         teacher_id = teacher.id
         
-        # گرفتن جلسات
         sessions = (await db.execute(
             select(Session).where(
                 Session.teacher_id == teacher_id
@@ -738,7 +750,6 @@ async def show_archives(m: types.Message, state: dict):
             parse_mode="Markdown"
         )
     
-    # دکمه‌های شیشه‌ای (Inline) برای جلسات
     kb = types.InlineKeyboardMarkup(row_width=5)
     buttons = []
     for s in sessions:
