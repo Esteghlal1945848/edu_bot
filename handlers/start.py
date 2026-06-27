@@ -13,8 +13,8 @@ import re, asyncio
 from datetime import datetime
 
 ADMIN_ID = 7336595194
-CHANNEL_ID = -1003918140957
-CHANNEL_LINK = "https://t.me/YourChannelUsername"
+CHANNEL_ID = -1002505515904
+CHANNEL_LINK = "https://t.me/School_learny"
 
 # ========================= helper =========================
 async def main_menu(user_id: int):
@@ -226,15 +226,15 @@ async def handle_buttons(m: types.Message):
         gr, ma = t.replace("رشته:", "").split("|")
         state = upload_state[uid]
         
+        # ===== آپلود کتاب (ادمین) - اولویت اول =====
+        if state.get("mode") == "book_upload" and state.get("step") == "book_major":
+            state["grade"] = gr; state["major"] = ma; state["step"] = "book_subject"
+            return await m.answer(f"📖 {state['publisher']} - {gr} - {ma}\n\nدرس مورد نظر رو انتخاب کن:", reply_markup=await book_subject_keyboard(state["publisher"], gr, ma))
+        
         # ===== کتاب (دانلود) =====
         if state.get("step") == "book_major":
             state["grade"] = gr; state["major"] = ma; state["step"] = "book_publisher"
             return await m.answer(f"📖 {gr} - {ma}\n\nناشر مورد نظر رو انتخاب کن:", reply_markup=await book_publisher_keyboard(gr, ma))
-        
-        # ===== آپلود کتاب (ادمین) =====
-        if state.get("mode") == "book_upload" and state.get("step") == "book_major":
-            state["grade"] = gr; state["major"] = ma; state["step"] = "book_subject"
-            return await m.answer(f"📖 {state['publisher']} - {gr} - {ma}\n\nدرس مورد نظر رو انتخاب کن:", reply_markup=await book_subject_keyboard(state["publisher"], gr, ma))
         
         # ===== آپلود جزوه/ویدیو =====
         if state.get("mode") == "admin_upload":
