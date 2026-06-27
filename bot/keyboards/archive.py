@@ -30,7 +30,6 @@ async def institute_keyboard():
         kb.add(KeyboardButton(ins.name))
         added.add(ins.name)
 
-    # پیشفرض‌هایی که توی دیتابیس نیستن (بدون کلاسینو)
     defaults = ["ماز", "آلفا اسکول", "تایتان"]
     for name in defaults:
         if name not in added:
@@ -79,78 +78,109 @@ def subject_keyboard(grade, major):
         kb.add(KeyboardButton(s))
     return kb
 
-# ========== کتاب‌های کمک آموزشی (از دیتابیس) ==========
-async def book_subject_keyboard(publisher, grade, major):
-    from database.core import get_db
-    from database.models import Publisher
-    from sqlalchemy import select
-    from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
-
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-
-    async for db in get_db():
-        result = await db.execute(
-            select(Publisher).where(
-                Publisher.name == publisher
-            )
-        )
-
-        pub = result.scalar_one_or_none()
-
-        if pub:
-            data = pub.subjects_by_grade or {}
-            if grade in data and major in data[grade]:
-                for subject in data[grade][major]:
-                    kb.add(KeyboardButton(subject))
-                return kb
-
-    # اگر ناشر در دیتابیس نبود یا درسی نداشت، از پیشفرض استفاده کن
-    defaults = {
-        "ریاضی": [
-            "ریاضی",
-            "فیزیک",
-            "شیمی",
-            "هندسه"
-        ],
-        "تجربی": [
-            "زیست شناسی",
-            "فیزیک",
-            "شیمی",
-            "ریاضی"
-        ]
+# ========== کتاب‌های کمک آموزشی ==========
+book_subjects = {
+    "فرمول بیست": {
+        "دهم": {
+            "ریاضی": ["شیمی", "هندسه", "فیزیک", "فارسی", "دین و زندگی", "عربی", "جغرافیا"],
+            "تجربی": ["زیست", "شیمی", "ریاضی", "فیزیک", "فارسی", "دین و زندگی", "عربی", "جغرافیا"]
+        },
+        "یازدهم": {
+            "ریاضی": ["حسابان", "آمار و احتمال", "دین و زندگی", "فارسی", "عربی", "تاریخ", "شیمی", "زمین شناسی", "انسان و محیط زیست"],
+            "تجربی": ["دین و زندگی", "فارسی", "عربی", "فیزیک", "شیمی", "ریاضی", "تاریخ", "زمین شناسی", "انسان و محیط زیست"]
+        },
+        "دوازدهم": {
+            "ریاضی": ["هندسه", "گسسته", "زبان", "فیزیک", "ادبیات", "عربی", "دینی", "شیمی", "حسابان"],
+            "تجربی": ["زیست", "زبان", "فیزیک", "ادبیات", "عربی", "دینی", "شیمی", "ریاضی"]
+        }
+    },
+    "IQ": {
+        "دهم": {
+            "ریاضی": ["شیمی", "ریاضی", "فیزیک"],
+            "تجربی": ["زیست", "شیمی", "ریاضی", "فیزیک"]
+        },
+        "یازدهم": {
+            "ریاضی": ["شیمی", "فیزیک"],
+            "تجربی": ["شیمی", "ریاضی", "فیزیک", "زیست"]
+        },
+        "دوازدهم": {
+            "ریاضی": ["فیزیک", "شیمی"],
+            "تجربی": ["زیست", "فیزیک", "شیمی"]
+        }
+    },
+    "نشر الگو": {
+        "دهم": {
+            "ریاضی": ["فیزیک", "ریاضی"],
+            "تجربی": ["فیزیک", "ریاضی", "زیست"]
+        },
+        "یازدهم": {
+            "ریاضی": ["حسابان", "آمار و احتمال"],
+            "تجربی": ["فیزیک", "ریاضی", "زیست"]
+        },
+        "دوازدهم": {
+            "ریاضی": ["گسسته", "فیزیک", "هندسه", "شیمی", "حسابان"],
+            "تجربی": ["شیمی", "ریاضی", "فیزیک", "زیست"]
+        }
+    },
+    "خیلی سبز": {
+        "دهم": {
+            "ریاضی": ["شیمی", "فیزیک", "ریاضی", "هندسه"],
+            "تجربی": ["زیست", "شیمی", "فیزیک", "ریاضی"]
+        },
+        "یازدهم": {
+            "ریاضی": ["شیمی", "فیزیک", "حسابان", "هندسه"],
+            "تجربی": ["زیست", "شیمی", "فیزیک", "ریاضی"]
+        },
+        "دوازدهم": {
+            "ریاضی": ["شیمی", "فیزیک", "حسابان", "گسسته", "هندسه"],
+            "تجربی": ["زیست", "شیمی", "فیزیک", "ریاضی"]
+        }
+    },
+    "نردبام": {
+        "دهم": {
+            "ریاضی": ["ریاضی", "فیزیک", "هندسه"],
+            "تجربی": ["ریاضی", "زیست", "فیزیک"]
+        },
+        "یازدهم": {
+            "ریاضی": ["شیمی", "فیزیک", "حسابان", "هندسه"],
+            "تجربی": ["شیمی", "فیزیک", "زیست", "ریاضی"]
+        },
+        "دوازدهم": {
+            "ریاضی": ["فیزیک", "شیمی", "هندسه"],
+            "تجربی": ["فیزیک", "شیمی", "زیست"]
+        }
     }
-
-    for s in defaults.get(major, []):
-        kb.add(KeyboardButton(s))
-
-    return kb
+}
 
 async def book_publisher_keyboard(grade, major):
-    from database.core import get_db
-    from database.models import Publisher
-    from sqlalchemy import select
-    from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
-
+    """نمایش ناشرهای کتاب بر اساس پایه و رشته"""
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-
-    async for db in get_db():
-        result = await db.execute(
-            select(Publisher).where(Publisher.type == "book_publisher")
-        )
-        publishers = result.scalars().all()
-
-    # همه ناشران book_publisher رو نشون بده
+    
     added = set()
-    for pub in publishers:
-        if pub.name not in added:
-            kb.add(KeyboardButton(pub.name))
-            added.add(pub.name)
+    for publisher, grades in book_subjects.items():
+        if grade in grades and major in grades[grade]:
+            kb.add(KeyboardButton(publisher))
+            added.add(publisher)
+    
+    # اگه هیچ ناشری پیدا نشد، همه رو نشون بده
+    if not added:
+        for publisher in book_subjects.keys():
+            kb.add(KeyboardButton(publisher))
+    
+    kb.add(KeyboardButton("🔙 برگشت به منو"))
+    return kb
 
-    # پیشفرض‌هایی که توی دیتابیس نیستن
-    defaults = ["خیلی سبز", "نشر الگو", "فرمول بیست", "نردبام", "IQ"]
-    for name in defaults:
-        if name not in added:
-            kb.add(KeyboardButton(name))
-
-    kb.add(KeyboardButton("❌ لغو"))
+async def book_subject_keyboard(publisher, grade, major):
+    """نمایش دروس یک ناشر بر اساس پایه و رشته"""
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    
+    subjects_list = book_subjects.get(publisher, {}).get(grade, {}).get(major, [])
+    
+    if subjects_list:
+        for subject in subjects_list:
+            kb.add(KeyboardButton(subject))
+    else:
+        kb.add(KeyboardButton("❌ درسی یافت نشد"))
+    
+    kb.add(KeyboardButton("🔙 برگشت به منو"))
     return kb
