@@ -13,7 +13,7 @@ class Publisher(Base):
     __tablename__ = "publishers"
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True)
-    type = Column(String)  # institute, book_publisher
+    type = Column(String)
     subjects_by_grade = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.now)
 
@@ -40,18 +40,6 @@ class Archive(Base):
     book_name = Column(String, nullable=True)
     file_id = Column(String)
     file_name = Column(String, nullable=True)
-    caption = Column(String, nullable=True)
-    uploaded_by = Column(BigInteger)
-    created_at = Column(DateTime, default=datetime.now)
-
-class Session(Base):
-    __tablename__ = "sessions"
-    id = Column(Integer, primary_key=True)
-    teacher_id = Column(Integer, ForeignKey("teachers.id"))
-    session_number = Column(Integer)
-    title = Column(String, nullable=True)
-    file_id = Column(String)
-    file_name = Column(String)
     caption = Column(String, nullable=True)
     uploaded_by = Column(BigInteger)
     created_at = Column(DateTime, default=datetime.now)
