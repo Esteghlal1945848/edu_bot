@@ -90,7 +90,7 @@ async def handle_buttons(m: types.Message):
         await m.answer("📩 **ارتباط با ادمین**\n\nبرای ارتباط مستقیم با ادمین، روی دکمه زیر کلیک کن و پیامت رو بفرست.\n\n📌 پاسخ شما در اسرع وقت داده میشه.", reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("🔙 برگشت به منو")), parse_mode="Markdown")
         return await m.answer("👇 روی دکمه زیر کلیک کن:", reply_markup=kb)
 
-    # ===================== SESSION UPLOAD (FIXED) =====================
+    # ===================== SESSION UPLOAD =====================
     if t == "📤 آپلود جلسه":
         upload_state[uid] = {"mode": "session_upload", "step": "ask_teacher"}
         return await m.answer("📤 **آپلود جلسه جدید**\n\nنام دبیر رو وارد کن:\nمثال: معین کرمی", reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("🔙 برگشت به منو")))
@@ -108,11 +108,6 @@ async def handle_buttons(m: types.Message):
             state["grade"] = t
             state["step"] = "ask_major"
             return await m.answer(f"👨‍🏫 دبیر: {state['teacher_name']}\n📚 پایه: {t}\n\nرشته رو انتخاب کن:", reply_markup=major_keyboard())
-        
-        if step == "ask_major":
-            state["major"] = t
-            state["step"] = "ask_subject"
-            return await m.answer(f"👨‍🏫 دبیر: {state['teacher_name']}\n📚 پایه: {state['grade']}\n🎓 رشته: {t}\n\nدرس رو انتخاب کن:", reply_markup=subject_keyboard(t))
         
         if step == "ask_subject":
             state["subject"] = t
@@ -158,7 +153,7 @@ async def handle_buttons(m: types.Message):
                     await db.flush()
                 
                 await db.commit()
-                state["teacher_id"] = teacher.id  # ✅ FIXED: teacher_id saved
+                state["teacher_id"] = teacher.id
             
             state["session_number"] = session_num
             state["step"] = "waiting_for_file"
@@ -218,30 +213,58 @@ async def handle_buttons(m: types.Message):
     if t in ["دهم", "یازدهم", "دوازدهم", "جامع"]:
         if uid in upload_state:
             state = upload_state[uid]
+
+            if state.get("step") == "ask_grade":
+                state["grade"] = t
+                state["step"] = "ask_major"
+                return await m.answer(
+                    f"📚 پایه: {t}\n\nرشته رو انتخاب کن:",
+                    reply_markup=major_keyboard()
+                )
+
             if state.get("step") == "book_grade":
                 state["grade"] = t
                 state["step"] = "book_major"
-                return await m.answer(f"📖 پایه: {t}\n\nرشته را انتخاب کن:", reply_markup=major_keyboard(state=t))
-            if state.get("mode") in ["admin_upload", "user_download"] and state.get("step") in ["grade", "major"]:
+                return await m.answer(
+                    f"📖 پایه: {t}\n\nرشته را انتخاب کن:",
+                    reply_markup=major_keyboard(state=t)
+                )
+
+            if state.get("mode") in ["admin_upload", "user_download"] and state.get("step") == "grade":
                 state["grade"] = t
                 state["step"] = "major"
-                return await m.answer("رشته را انتخاب کن:", reply_markup=major_keyboard(state=t))
+                return await m.answer(
+                    "رشته را انتخاب کن:",
+                    reply_markup=major_keyboard(state=t)
+                )
     
     if t.startswith("رشته:"):
         if uid not in upload_state: return await m.answer("❌ لطفاً از ابتدا شروع کن")
         gr, ma = t.replace("رشته:", "").split("|")
         state = upload_state[uid]
+        
+        if state.get("step") == "ask_major":
+            state["grade"] = gr
+            state["major"] = ma
+            state["step"] = "ask_subject"
+            return await m.answer(
+                f"👨‍🏫 دبیر: {state['teacher_name']}\n📚 پایه: {gr}\n🎓 رشته: {ma}\n\nدرس رو انتخاب کن:",
+                reply_markup=subject_keyboard(ma)
+            )
+        
         if state.get("mode") == "book_upload" and state.get("step") == "book_major":
             state["grade"] = gr
             state["major"] = ma
             state["step"] = "book_subject"
             return await m.answer(f"📖 {state['publisher']} - {gr} - {ma}\n\nدرس مورد نظر رو انتخاب کن:", reply_markup=await book_subject_keyboard(state["publisher"], gr, ma))
-        if state.get("mode") == "admin_upload":
+        
+        if state.get("mode") == "admin_upload" and state.get("step") == "major":
             state["grade"] = gr
             state["major"] = ma
             state["step"] = "institute"
             return await m.answer("🏛 موسسه را انتخاب کن", reply_markup=await institute_keyboard())
-        if state.get("mode") == "user_download" and state.get("category") != "book":
+        
+        if state.get("mode") == "user_download" and state.get("category") != "book" and state.get("step") == "major":
             state["grade"] = gr
             state["major"] = ma
             state["step"] = "institute"
@@ -264,12 +287,10 @@ async def handle_buttons(m: types.Message):
                 return await m.answer("👨‍🏫 دبیر را انتخاب کن:", reply_markup=kb)
             return await m.answer("❌ دبیری برای این درس پیدا نشد.", reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("🔙 برگشت به منو")))
 
-    # ===================== TEACHER SELECTION (FIXED) =====================
     if uid in upload_state and upload_state[uid].get("step") == "teacher":
         state = upload_state[uid]
         state["teacher"] = t
         
-        # ✅ FIXED: Find teacher and save teacher_id
         async for db in get_db():
             pub = await db.scalar(select(Publisher).where(func.lower(Publisher.name) == func.lower(state["institute"])))
             if pub:
@@ -301,7 +322,6 @@ async def handle_buttons(m: types.Message):
             return await m.answer("❌ لغو شد", reply_markup=await main_menu(uid))
         
         async for db in get_db():
-            # Save to Archive
             db.add(Archive(
                 category=state.get("category", "pdf"),
                 type=state["temp_file_type"],
@@ -316,7 +336,6 @@ async def handle_buttons(m: types.Message):
                 uploaded_by=uid
             ))
             
-            # ✅ FIXED: Save to Session with teacher_id
             if state.get("session_number") and state.get("teacher_id"):
                 db.add(Session(
                     teacher_id=state["teacher_id"],
@@ -516,10 +535,12 @@ async def show_book_archives(m: types.Message, state: dict):
     if m.from_user.id in upload_state: del upload_state[m.from_user.id]
     await m.answer("✅ همه کتاب‌ها ارسال شد", reply_markup=await main_menu(m.from_user.id))
 
-# ===================== SHOW ARCHIVES (FIXED) =====================
+# ===================== SHOW ARCHIVES =====================
 async def show_archives(m: types.Message, state: dict):
-    # ✅ FIXED: Find teacher by name, not by teacher_id
     teacher_obj = None
+    sessions = []
+    archives = []
+    
     async for db in get_db():
         pub = await db.scalar(select(Publisher).where(func.lower(Publisher.name) == func.lower(state["institute"])))
         if pub:
@@ -534,33 +555,44 @@ async def show_archives(m: types.Message, state: dict):
             )
             if teacher_obj:
                 state["teacher_id"] = teacher_obj.id
-    
+                sessions = (await db.execute(select(Session).where(Session.teacher_id == teacher_obj.id).order_by(Session.session_number))).scalars().all()
+                archives = (await db.execute(select(Archive).where(
+                    Archive.teacher == state["teacher"],
+                    Archive.grade == state["grade"],
+                    Archive.major == state["major"],
+                    Archive.institute == state["institute"],
+                    Archive.subject == state["subject"]
+                ))).scalars().all()
+
     if not teacher_obj:
         return await m.answer("❌ دبیر پیدا نشد", reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("🔙 برگشت به منو")))
-    
-    # Get sessions
-    sessions = []
-    async for db in get_db():
-        sessions = (await db.execute(select(Session).where(Session.teacher_id == teacher_obj.id))).scalars().all()
-    
-    if not sessions:
-        return await m.answer("❌ هیچ جلسه‌ای برای این دبیر پیدا نشد", reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("🔙 برگشت به منو")))
-    
-    # Build keyboard
-    kb = types.InlineKeyboardMarkup(row_width=2)
+
     session_nums = [s.session_number for s in sessions]
-    for i in range(1, 11):
-        if i in session_nums:
-            kb.insert(types.InlineKeyboardButton(f"✅ جلسه {i}", callback_data=f"get_session|{teacher_obj.id}|{i}"))
-        else:
-            kb.insert(types.InlineKeyboardButton(f"⬜ جلسه {i}", callback_data="no_session"))
-    kb.add(types.InlineKeyboardButton("🔙 برگشت به منو", callback_data="back_to_menu"))
-    
-    await m.answer(
-        f"👨‍🏫 **{state['teacher']}**\n📚 {state['grade']} - {state['major']} - {state['subject']}\n\n✅ جلسات موجود:",
-        reply_markup=kb,
-        parse_mode="Markdown"
-    )
+
+    if not sessions and not archives:
+        return await m.answer("❌ هیچ فایلی برای این دبیر پیدا نشد", reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("🔙 برگشت به منو")))
+
+    if sessions:
+        kb = types.InlineKeyboardMarkup(row_width=2)
+        for i in range(1, 11):
+            if i in session_nums:
+                kb.insert(types.InlineKeyboardButton(f"✅ جلسه {i}", callback_data=f"get_session|{teacher_obj.id}|{i}"))
+            else:
+                kb.insert(types.InlineKeyboardButton(f"⬜ جلسه {i}", callback_data="no_session"))
+        kb.add(types.InlineKeyboardButton("🔙 برگشت به منو", callback_data="back_to_menu"))
+        await m.answer(
+            f"👨‍🏫 **{state['teacher']}**\n📚 {state['grade']} - {state['major']} - {state['subject']}\n\n✅ جلسات موجود:",
+            reply_markup=kb,
+            parse_mode="Markdown"
+        )
+    elif archives:
+        for a in archives:
+            is_video = a.type == "video" or (a.file_name and a.file_name.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')))
+            cap = f"📄 {a.file_name}" + (f"\n📝 {a.caption}" if a.caption else "")
+            await send_file_with_timer(m.bot, m.from_user.id, a.file_id, cap, is_video=is_video)
+        if m.from_user.id in upload_state:
+            del upload_state[m.from_user.id]
+        await m.answer("✅ همه فایل‌ها ارسال شد", reply_markup=await main_menu(m.from_user.id))
 
 # ===================== HANDLE FILE =====================
 async def handle_file(m: types.Message):
@@ -622,7 +654,7 @@ async def handle_file(m: types.Message):
         state["step"] = "waiting_for_caption_session"
         return await m.answer(f"✅ فایل جلسه دریافت شد!\n\n👨‍🏫 {state['teacher_name']}\n📚 جلسه {state['session_number']}\n\n📝 حالا کپشن جلسه رو وارد کن:", reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("❌ لغو")).add(KeyboardButton("🔙 برگشت به منو")))
 
-# ===================== HANDLE CALLBACK (FIXED) =====================
+# ===================== HANDLE CALLBACK (FIXED - DetachedInstanceError) =====================
 async def handle_callback(cb: types.CallbackQuery):
     await cb.answer()
     
@@ -649,12 +681,16 @@ async def handle_callback(cb: types.CallbackQuery):
         await list_users(Mock(cb), page)
         return
     
-    # ✅ FIXED: Get session and send file
     if cb.data.startswith("get_session|"):
-        _, teacher_id, session_num = cb.data.split("|")
-        teacher_id = int(teacher_id)
-        session_num = int(session_num)
-        
+        parts = cb.data.split("|")
+        teacher_id = int(parts[1])
+        session_num = int(parts[2])
+
+        file_id = None
+        file_name = None
+        title = None
+        teacher_name = "نامشخص"
+
         async for db in get_db():
             session = await db.scalar(
                 select(Session).where(
@@ -662,28 +698,34 @@ async def handle_callback(cb: types.CallbackQuery):
                     Session.session_number == session_num
                 )
             )
-            if not session:
-                await cb.answer(f"❌ جلسه {session_num} پیدا نشد", show_alert=True)
-                return
-            
-            teacher = await db.scalar(select(Teacher).where(Teacher.id == teacher_id))
-            teacher_name = teacher.name if teacher else "نامشخص"
-            
-            # ✅ FIXED: Check if video or document
-            is_video = session.file_name and session.file_name.lower().endswith(('.mp4', '.avi', '.mov', '.mkv'))
-            
-            caption = f"📚 جلسه {session_num}\n👨‍🏫 {teacher_name}"
-            if session.title:
-                caption += f"\n📝 {session.title}"
-            
+            if session:
+                file_id = session.file_id
+                file_name = session.file_name
+                title = session.title
+                teacher = await db.scalar(select(Teacher).where(Teacher.id == teacher_id))
+                if teacher:
+                    teacher_name = teacher.name
+
+        if not file_id:
+            await cb.answer(f"❌ جلسه {session_num} پیدا نشد", show_alert=True)
+            return
+
+        is_video = bool(file_name and file_name.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')))
+        caption = f"📚 جلسه {session_num}\n👨‍🏫 {teacher_name}"
+        if title:
+            caption += f"\n📝 {title}"
+
+        try:
             await send_file_with_timer(
                 cb.bot,
                 cb.message.chat.id,
-                session.file_id,
+                file_id,
                 caption,
                 is_video=is_video
             )
             await cb.answer(f"✅ جلسه {session_num} ارسال شد")
+        except Exception as e:
+            await cb.answer("❌ خطا در ارسال فایل", show_alert=True)
         return
     
     if cb.data.startswith("admin_session_"):
