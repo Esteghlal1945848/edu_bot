@@ -29,7 +29,7 @@ async def main():
     )
     dp = Dispatcher(bot, storage=storage)
 
-    # ثبت handler‌ها با ترتیب درست
+    # ثبت handler‌ها
     dp.register_message_handler(cmd_start, commands=["start"])
     dp.register_message_handler(
         handle_file,
@@ -39,10 +39,10 @@ async def main():
         handle_buttons,
         content_types=[types.ContentType.TEXT]
     )
-    dp.register_callback_query_handler(handle_callback)  # ← این خط اضافه شد!
+    dp.register_callback_query_handler(handle_callback)
 
-    # تنظیم on_startup
-    dp.register_startup_hook(on_startup)
+    # اجرای on_startup به صورت مستقیم
+    await on_startup(dp)
 
     # شروع ربات
     await dp.start_polling()
