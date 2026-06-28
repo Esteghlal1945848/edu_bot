@@ -3,7 +3,6 @@ from sqlalchemy import select, func
 from database.core import get_db
 from database.models import User, Archive, Publisher, Teacher
 from bot.keyboards.archive import *
-from bot.data.teacher import teacher_keyboard
 from handlers.state import upload_state
 from aiogram.types import KeyboardButton
 import re, asyncio
@@ -88,7 +87,7 @@ async def handle_buttons(m: types.Message):
         if uid in upload_state: del upload_state[uid]
         return await m.answer("🔙 به منوی اصلی برگشتی.", reply_markup=await main_menu(uid))
     
-    # 3. CAPTION HANDLERS (MUST BE BEFORE ANY OTHER TEXT PROCESSING)
+    # 3. CAPTION HANDLERS
     if uid in upload_state and upload_state[uid].get("step") == "waiting_for_caption_file":
         state = upload_state[uid]
         caption = t
@@ -260,11 +259,13 @@ async def handle_buttons(m: types.Message):
             reply_markup=subject_keyboard(major=state.get("major", ""))
         )
 
+    # ===================== SUBJECT HANDLER (with lazy import) =====================
     if uid in upload_state and upload_state[uid].get("step") == "subject":
         state = upload_state[uid]
         state["subject"] = t
         state["step"] = "teacher"
         if state.get("mode") in ["admin_upload", "user_download"]:
+            from bot.data.teacher import teacher_keyboard  # ← Lazy import to fix circular import
             kb = await teacher_keyboard(state["grade"], state["major"], state["institute"], t)
             if kb:
                 kb.add(KeyboardButton("🔙 برگشت به منو"))
@@ -579,7 +580,6 @@ async def show_book_archives(m: types.Message, state: dict):
     if m.from_user.id in upload_state: del upload_state[m.from_user.id]
     await m.answer("✅ همه کتاب‌ها ارسال شد", reply_markup=await main_menu(m.from_user.id))
 
-# ===================== SHOW ARCHIVES =====================
 async def show_archives(m: types.Message, state: dict):
     archives = []
     async for db in get_db():
@@ -602,7 +602,6 @@ async def show_archives(m: types.Message, state: dict):
     if m.from_user.id in upload_state: del upload_state[m.from_user.id]
     await m.answer("✅ همه فایل‌ها ارسال شد", reply_markup=await main_menu(m.from_user.id))
 
-# ===================== HANDLE FILE =====================
 async def handle_file(m: types.Message):
     uid = m.from_user.id
     if m.chat.id == CHANNEL_ID or (m.forward_from_chat and m.forward_from_chat.id == CHANNEL_ID):
@@ -660,7 +659,6 @@ async def handle_file(m: types.Message):
             reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("❌ لغو")).add(KeyboardButton("🔙 برگشت به منو"))
         )
 
-# ===================== HANDLE CALLBACK =====================
 async def handle_callback(cb: types.CallbackQuery):
     await cb.answer()
     
