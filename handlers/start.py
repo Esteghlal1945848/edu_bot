@@ -265,7 +265,7 @@ async def handle_buttons(m: types.Message):
         state["subject"] = t
         state["step"] = "teacher"
         if state.get("mode") in ["admin_upload", "user_download"]:
-            from bot.data.teacher import teacher_keyboard  # ← Lazy import to fix circular import
+            from bot.data.teacher import teacher_keyboard
             kb = await teacher_keyboard(state["grade"], state["major"], state["institute"], t)
             if kb:
                 kb.add(KeyboardButton("🔙 برگشت به منو"))
@@ -650,13 +650,28 @@ async def handle_file(m: types.Message):
     if state.get("mode") == "admin_upload" and state.get("step") == "waiting_for_file":
         if not m.document and not m.video:
             return await m.answer("❌ لطفاً فقط فایل PDF یا ویدیو ارسال کن")
-        state["temp_file_id"] = m.document.file_id if m.document else m.video.file_id
-        state["temp_file_name"] = m.document.file_name if m.document else f"video_{m.video.file_id[:8]}.mp4"
-        state["temp_file_type"] = "pdf" if m.document else "video"
-        state["step"] = "waiting_for_caption_file"
+        file_id = m.document.file_id if m.document else m.video.file_id
+        file_name = m.document.file_name if m.document else f"video_{m.video.file_id[:8]}.mp4"
+        file_type = "pdf" if m.document else "video"
+        async for db in get_db():
+            db.add(Archive(
+                category=state.get("category", "pdf"),
+                type=file_type,
+                grade=state["grade"],
+                major=state["major"],
+                institute=state["institute"],
+                subject=state["subject"],
+                teacher=state.get("teacher"),
+                file_id=file_id,
+                file_name=file_name,
+                caption="",
+                uploaded_by=uid
+            ))
+            await db.commit()
+        del upload_state[uid]
         return await m.answer(
-            f"✅ فایل دریافت شد!\n📄 {state['temp_file_name']}\n\n📝 حالا کپشن فایل رو وارد کن:",
-            reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("❌ لغو")).add(KeyboardButton("🔙 برگشت به منو"))
+            f"✅ فایل ثبت شد!\n📚 {state['grade']} - {state['major']} - {state['institute']} - {state['subject']}\n👨‍🏫 {state.get('teacher','ندارد')}\n📄 {file_name}",
+            reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("⚡ ادامه")).add(KeyboardButton("❌ لغو")).add(KeyboardButton("🔙 برگشت به منو"))
         )
 
 async def handle_callback(cb: types.CallbackQuery):
