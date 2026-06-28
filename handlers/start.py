@@ -87,37 +87,7 @@ async def handle_buttons(m: types.Message):
         if uid in upload_state: del upload_state[uid]
         return await m.answer("🔙 به منوی اصلی برگشتی.", reply_markup=await main_menu(uid))
     
-    # 3. CAPTION HANDLERS
-    if uid in upload_state and upload_state[uid].get("step") == "waiting_for_caption_file":
-        state = upload_state[uid]
-        caption = t
-        if caption == "❌ لغو":
-            del upload_state[uid]
-            return await m.answer("❌ لغو شد", reply_markup=await main_menu(uid))
-        
-        async for db in get_db():
-            db.add(Archive(
-                category=state.get("category", "pdf"),
-                type=state["temp_file_type"],
-                grade=state["grade"],
-                major=state["major"],
-                institute=state["institute"],
-                subject=state["subject"],
-                teacher=state.get("teacher"),
-                file_id=state["temp_file_id"],
-                file_name=state["temp_file_name"],
-                caption=caption,
-                uploaded_by=uid
-            ))
-            await db.commit()
-        
-        del upload_state[uid]
-        return await m.answer(
-            f"✅ ثبت شد!\n📚 {state['grade']} - {state['major']} - {state['institute']} - {state['subject']}\n👨‍🏫 {state.get('teacher','ندارد')}\n📄 {state['temp_file_name']}",
-            reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("⚡ ادامه")).add(KeyboardButton("❌ لغو")).add(KeyboardButton("🔙 برگشت به منو")),
-            parse_mode="Markdown"
-        )
-
+    # 3. CAPTION HANDLERS (برای کتاب - چون کتاب کپشن جدا نیاز داره)
     if uid in upload_state and upload_state[uid].get("step") == "waiting_for_caption_book":
         state = upload_state[uid]
         caption = t
@@ -279,7 +249,7 @@ async def handle_buttons(m: types.Message):
         if state.get("mode") == "admin_upload":
             state["step"] = "waiting_for_file"
             return await m.answer(
-                f"✅ دبیر {t} انتخاب شد.\n\n📤 حالا فایل رو ارسال کن (PDF یا ویدیو)",
+                f"✅ دبیر {t} انتخاب شد.\n\n📤 حالا فایل رو ارسال کن و **کپشن رو توی همون پیام فایل** بنویس.",
                 reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("❌ لغو")).add(KeyboardButton("🔙 برگشت به منو"))
             )
         
@@ -543,11 +513,21 @@ async def show_stats(m: types.Message):
 async def list_files(m: types.Message):
     async for db in get_db():
         files = (await db.execute(select(Archive).order_by(Archive.id.desc()).limit(20))).scalars().all()
-    if not files: return await m.answer("❌ هیچ فایلی وجود ندارد")
+    if not files: 
+        return await m.answer("❌ هیچ فایلی وجود ندارد")
+    
     for f in files:
         cat = {"pdf":"📄 جزوه","video":"🎥 ویدیو","book":"📖 کتاب"}.get(f.category,"📄")
+        caption_text = f"\n📝 {f.caption}" if f.caption else ""
         await m.answer(
-            f"{cat} **{f.file_name}**\n\n🆔 `{f.file_id[:20]}...`\n📚 پایه: {f.grade}\n🎓 رشته: {f.major}\n🏛 موسسه: {f.institute}\n📖 درس: {f.subject}\n👨‍🏫 دبیر: {f.teacher or 'ندارد'}",
+            f"{cat} **{f.file_name}**{caption_text}\n\n"
+            f"🆔 آیدی فایل: `{f.file_id[:20]}...`\n"
+            f"📚 پایه: {f.grade}\n"
+            f"🎓 رشته: {f.major}\n"
+            f"🏛 موسسه/ناشر: {f.institute}\n"
+            f"📖 درس: {f.subject}\n"
+            f"👨‍🏫 دبیر: {f.teacher or 'ندارد'}\n"
+            f"📌 کتاب: {f.book_name or 'ندارد'}",
             parse_mode="Markdown"
         )
     await m.answer(f"✅ {len(files)} فایل آخر نمایش داده شد")
@@ -647,12 +627,16 @@ async def handle_file(m: types.Message):
             reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("❌ لغو")).add(KeyboardButton("🔙 برگشت به منو"))
         )
 
+    # ===================== ADMIN UPLOAD (WITH CAPTION IN SAME MESSAGE) =====================
     if state.get("mode") == "admin_upload" and state.get("step") == "waiting_for_file":
         if not m.document and not m.video:
             return await m.answer("❌ لطفاً فقط فایل PDF یا ویدیو ارسال کن")
+        
         file_id = m.document.file_id if m.document else m.video.file_id
         file_name = m.document.file_name if m.document else f"video_{m.video.file_id[:8]}.mp4"
         file_type = "pdf" if m.document else "video"
+        caption = m.caption or ""  # ← کپشن از همون پیام فایل
+        
         async for db in get_db():
             db.add(Archive(
                 category=state.get("category", "pdf"),
@@ -664,13 +648,14 @@ async def handle_file(m: types.Message):
                 teacher=state.get("teacher"),
                 file_id=file_id,
                 file_name=file_name,
-                caption="",
+                caption=caption,
                 uploaded_by=uid
             ))
             await db.commit()
+        
         del upload_state[uid]
         return await m.answer(
-            f"✅ فایل ثبت شد!\n📚 {state['grade']} - {state['major']} - {state['institute']} - {state['subject']}\n👨‍🏫 {state.get('teacher','ندارد')}\n📄 {file_name}",
+            f"✅ فایل ثبت شد!\n📚 {state['grade']} - {state['major']} - {state['institute']} - {state['subject']}\n👨‍🏫 {state.get('teacher','ندارد')}\n📄 {file_name}\n" + (f"📝 {caption}" if caption else ""),
             reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("⚡ ادامه")).add(KeyboardButton("❌ لغو")).add(KeyboardButton("🔙 برگشت به منو"))
         )
 
