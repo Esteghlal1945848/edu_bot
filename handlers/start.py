@@ -78,13 +78,72 @@ async def auto_save_from_channel(m: types.Message):
 
 async def handle_buttons(m: types.Message):
     t, uid = m.text, m.from_user.id
-    if t != "🔙 برگشت به منو" and not await check_subscription(uid, m.bot): return await send_join_message(m)
+    
+    # 1. Check subscription
+    if t != "🔙 برگشت به منو" and not await check_subscription(uid, m.bot): 
+        return await send_join_message(m)
+    
+    # 2. Check back button
     if t == "🔙 برگشت به منو":
         if uid in upload_state: del upload_state[uid]
         return await m.answer("🔙 به منوی اصلی برگشتی.", reply_markup=await main_menu(uid))
+    
+    # 3. CAPTION HANDLERS (MUST BE BEFORE ANY OTHER TEXT PROCESSING)
+    if uid in upload_state and upload_state[uid].get("step") == "waiting_for_caption_file":
+        state = upload_state[uid]
+        caption = t
+        if caption == "❌ لغو":
+            del upload_state[uid]
+            return await m.answer("❌ لغو شد", reply_markup=await main_menu(uid))
+        
+        async for db in get_db():
+            db.add(Archive(
+                category=state.get("category", "pdf"),
+                type=state["temp_file_type"],
+                grade=state["grade"],
+                major=state["major"],
+                institute=state["institute"],
+                subject=state["subject"],
+                teacher=state.get("teacher"),
+                file_id=state["temp_file_id"],
+                file_name=state["temp_file_name"],
+                caption=caption,
+                uploaded_by=uid
+            ))
+            await db.commit()
+        
+        del upload_state[uid]
+        return await m.answer(
+            f"✅ ثبت شد!\n📚 {state['grade']} - {state['major']} - {state['institute']} - {state['subject']}\n👨‍🏫 {state.get('teacher','ندارد')}\n📄 {state['temp_file_name']}",
+            reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("⚡ ادامه")).add(KeyboardButton("❌ لغو")).add(KeyboardButton("🔙 برگشت به منو")),
+            parse_mode="Markdown"
+        )
+
+    if uid in upload_state and upload_state[uid].get("step") == "waiting_for_caption_book":
+        state = upload_state[uid]
+        caption = t
+        if caption == "❌ لغو":
+            del upload_state[uid]
+            return await m.answer("❌ لغو شد", reply_markup=await main_menu(uid))
+        async for db in get_db():
+            db.add(Archive(category="book", type="pdf", grade=state["grade"], major=state["major"], institute=state["publisher"], subject=state["subject"], file_id=state["temp_file_id"], file_name=state["temp_file_name"], caption=caption, uploaded_by=uid))
+            await db.commit()
+        del upload_state[uid]
+        return await m.answer(
+            f"✅ کتاب ثبت شد!\n📖 {state['publisher']} - {state['grade']} - {state['major']} - {state['subject']}",
+            reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("⚡ ادامه")).add(KeyboardButton("❌ لغو")).add(KeyboardButton("🔙 برگشت به منو")),
+            parse_mode="Markdown"
+        )
+
+    # 4. Check admin access
     if uid != ADMIN_ID and t in ["👑 پنل ادمین","⚡ آپلود سریع","📤 آپلود جزوه","🎥 آپلود ویدئو","📖 آپلود کتاب","🗑 حذف دبیر","➕ اضافه کردن انتشارات","📋 لیست فایل‌ها","🗑 حذف فایل","👥 لیست کاربران","📊 آمار","⚙️ تنظیمات","💾 بکاپ"]:
         return await m.answer("⛔ دسترسی نداری")
-    if t == "👑 پنل ادمین": return await m.answer("👑 **پنل مدیریت**", reply_markup=admin_kb(), parse_mode="Markdown")
+    
+    # 5. Admin panel
+    if t == "👑 پنل ادمین": 
+        return await m.answer("👑 **پنل مدیریت**", reply_markup=admin_kb(), parse_mode="Markdown")
+    
+    # 6. Contact admin
     if t == "📩 ارتباط با ادمین":
         kb = types.InlineKeyboardMarkup(row_width=1).add(types.InlineKeyboardButton("📩 ارسال پیام به ادمین", url="https://t.me/unbrokensociety2026"))
         await m.answer("📩 **ارتباط با ادمین**\n\nبرای ارتباط مستقیم با ادمین، روی دکمه زیر کلیک کن و پیامت رو بفرست.\n\n📌 پاسخ شما در اسرع وقت داده میشه.", reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("🔙 برگشت به منو")), parse_mode="Markdown")
@@ -225,53 +284,6 @@ async def handle_buttons(m: types.Message):
         
         if state.get("mode") == "user_download":
             return await show_archives(m, state)
-
-    # ===================== CAPTION HANDLERS =====================
-    if uid in upload_state and upload_state[uid].get("step") == "waiting_for_caption_file":
-        state = upload_state[uid]
-        caption = t
-        if caption == "❌ لغو":
-            del upload_state[uid]
-            return await m.answer("❌ لغو شد", reply_markup=await main_menu(uid))
-        
-        async for db in get_db():
-            db.add(Archive(
-                category=state.get("category", "pdf"),
-                type=state["temp_file_type"],
-                grade=state["grade"],
-                major=state["major"],
-                institute=state["institute"],
-                subject=state["subject"],
-                teacher=state.get("teacher"),
-                file_id=state["temp_file_id"],
-                file_name=state["temp_file_name"],
-                caption=caption,
-                uploaded_by=uid
-            ))
-            await db.commit()
-        
-        del upload_state[uid]
-        return await m.answer(
-            f"✅ ثبت شد!\n📚 {state['grade']} - {state['major']} - {state['institute']} - {state['subject']}\n👨‍🏫 {state.get('teacher','ندارد')}\n📄 {state['temp_file_name']}",
-            reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("⚡ ادامه")).add(KeyboardButton("❌ لغو")).add(KeyboardButton("🔙 برگشت به منو")),
-            parse_mode="Markdown"
-        )
-
-    if uid in upload_state and upload_state[uid].get("step") == "waiting_for_caption_book":
-        state = upload_state[uid]
-        caption = t
-        if caption == "❌ لغو":
-            del upload_state[uid]
-            return await m.answer("❌ لغو شد", reply_markup=await main_menu(uid))
-        async for db in get_db():
-            db.add(Archive(category="book", type="pdf", grade=state["grade"], major=state["major"], institute=state["publisher"], subject=state["subject"], file_id=state["temp_file_id"], file_name=state["temp_file_name"], caption=caption, uploaded_by=uid))
-            await db.commit()
-        del upload_state[uid]
-        return await m.answer(
-            f"✅ کتاب ثبت شد!\n📖 {state['publisher']} - {state['grade']} - {state['major']} - {state['subject']}",
-            reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("⚡ ادامه")).add(KeyboardButton("❌ لغو")).add(KeyboardButton("🔙 برگشت به منو")),
-            parse_mode="Markdown"
-        )
 
     # ===================== OTHER ADMIN FUNCTIONS =====================
     if t == "🗑 حذف دبیر":
@@ -567,7 +579,7 @@ async def show_book_archives(m: types.Message, state: dict):
     if m.from_user.id in upload_state: del upload_state[m.from_user.id]
     await m.answer("✅ همه کتاب‌ها ارسال شد", reply_markup=await main_menu(m.from_user.id))
 
-# ===================== SHOW ARCHIVES (SIMPLE - فقط Archive) =====================
+# ===================== SHOW ARCHIVES =====================
 async def show_archives(m: types.Message, state: dict):
     archives = []
     async for db in get_db():
@@ -648,7 +660,7 @@ async def handle_file(m: types.Message):
             reply_markup=types.ReplyKeyboardMarkup(resize_keyboard=True).add(KeyboardButton("❌ لغو")).add(KeyboardButton("🔙 برگشت به منو"))
         )
 
-# ===================== HANDLE CALLBACK (ساده شده) =====================
+# ===================== HANDLE CALLBACK =====================
 async def handle_callback(cb: types.CallbackQuery):
     await cb.answer()
     
